@@ -1,0 +1,16 @@
+{
+  "id": "/",
+  "name": "Arte al oído",
+  "short_name": "Arte al oído",
+  "description": "Galería de arte táctil y sonora",
+  "lang": "es-MX",
+  "start_url": "/#inicio",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#111513",
+  "theme_color": "#111513",
+  "icons": [
+    { "src": "/media/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/media/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
