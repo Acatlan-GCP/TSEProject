@@ -69,7 +69,7 @@ function home() {
   const work = demo[0];
   main.innerHTML = `<section class="hero">
     <div class="hero-copy"><div class="eyebrow">${icon('headphones')} Galería táctil y sonora</div>
-      <h1 tabindex="-1">El arte<br>se <em>escucha.</em></h1>
+      <h1 tabindex="-1">El arte también <br>se <em>escucha.</em></h1>
       <p>Explora obras de arte a través del tacto, la narración y el sonido.</p>
       <div class="hero-actions">
         <a class="button primary" href="#galeria">${icon('grid')} Explorar galería</a>
