@@ -196,19 +196,29 @@ function fillGallery() {
   }
 
   // Mostrar la galería
+  // Mostrar la galería
   function showGallery() {
-  if (!galleryContent) return;
+    if (!galleryContent) return;
 
-  galleryContent.hidden = false;
+    galleryContent.hidden = false;
 
-  const heading = current.querySelector('h2');
+    galleryContent.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
 
-  if (heading) {
-    heading.setAttribute('tabindex', '-1');
-    heading.focus();
+    const heading = current?.querySelector('h2');
+
+    if (heading) {
+      heading.setAttribute('tabindex', '-1');
+
+      setTimeout(() => {
+        heading.focus({ preventScroll: true });
+      }, 300);
+    }
   }
-  }
 
+  // Regresar al menú
   function showMenu() {
     if (!menu) return;
 
@@ -217,12 +227,8 @@ function fillGallery() {
       block: 'start'
     });
 
-    exploreButton?.focus();
+    exploreButton?.focus({ preventScroll: true });
   }
-
-  exploreButton?.addEventListener('click', showGallery);
-  backButton?.addEventListener('click', showMenu);
-
   // Escuchar la descripción de la obra
   const preview = () => {
     const work = catalog[selected];
