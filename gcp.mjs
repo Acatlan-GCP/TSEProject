@@ -9,9 +9,10 @@ export const CURATOR_UIDS = process.env.CURATOR_UIDS || '';
 export const ALLOW_REGISTRATION = process.env.ALLOW_REGISTRATION === 'true';
 
 export const FIRESTORE_DATABASE = process.env.FIRESTORE_DATABASE || '(default)';
-export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
-export const VERTEX_LOCATION = process.env.VERTEX_LOCATION || REGION;
+export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+export const VERTEX_LOCATION = process.env.VERTEX_LOCATION || 'global';
 export const TTS_VOICE = process.env.TTS_VOICE || 'es-US-Neural2-A';
+export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
 export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
 export const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '';

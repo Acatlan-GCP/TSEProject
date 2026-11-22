@@ -30,7 +30,12 @@ async function getCatalog() {
   if (catalog && Date.now() < expiration) return catalog;
   if (!pendingCatalog) {
     pendingCatalog = listDocs('works').then(works => {
-      catalog = works.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+      // FIX: Usar createdAt como respaldo si publishedAt no existe (borradores)
+      catalog = works.sort((a, b) => {
+        const dateA = a.publishedAt || a.createdAt || '0';
+        const dateB = b.publishedAt || b.createdAt || '0';
+        return dateB.localeCompare(dateA);
+      });
       expiration = Date.now() + 300000;
       return catalog;
     }).finally(() => { pendingCatalog = null; });
@@ -152,11 +157,22 @@ export async function api(request, path) {
   const media = path.match(/^\/api\/media\/([a-f0-9-]{36})\/(imagen|ambiente|intro|ficha|zona-[1-4])$/);
   if (method === 'GET' && media) {
     const [, id, key] = media;
-    const works = await getCatalog();
-    const artwork = works.find(work => work.id === id) || (await readDoc('works', id))?.data;
-    const object = key === 'imagen' ? artwork?.imagePath : key === 'ambiente' ? artwork?.ambiencePath : artwork?.audio?.[key];
+    
+    // Lectura directa para evitar problemas de caché con borradores nuevos
+    const document = await readDoc('works', id);
+    if (!document) throw notFound();
+    
+    const artwork = document.data;
+    const object = key === 'imagen' ? artwork?.imagePath 
+                  : key === 'ambiente' ? artwork?.ambiencePath 
+                  : artwork?.audio?.[key];
+                  
     if (!object) throw notFound();
-    return HTTP(302, null, { location: await signedObject(object), 'cache-control': 'public, max-age=60' });
+    
+    return HTTP(302, null, { 
+      location: await signedObject(object), 
+      'cache-control': 'public, max-age=60' 
+    });
   }
 
   if (method === 'POST' && ['/api/account/login', '/api/account/register'].includes(path)) {
@@ -343,6 +359,7 @@ if (path === '/api/admin/register' && method === 'POST') {
       exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
       uploadDate: new Date().toISOString(),
       imagePath: imagePath,
+      imageType: body.imageType || 'image/jpeg',
       zones: body.zones || [], // JSON de posiciones
       aiDescription: '', // Se llenará después con IA
       narrationAudioPath: '', // Se llenará después con ElevenLabs
@@ -391,11 +408,12 @@ if (path === '/api/admin/register' && method === 'POST') {
 
     if (zones.length === 0 || !aiDescription) {
       try {
-        const aiResult = await describeImage({ title: work.author, artist: 'Desconocido' }, work.imagePath, 'image/jpeg');
+        const aiResult = await describeImage({ title: work.author || 'Obra sin título', artist: work.exhibitionPlace || 'Desconocido' }, work.imagePath, work.imageType || 'image/jpeg');
         aiDescription = aiResult.summary || aiResult.intro || 'Descripción no disponible.';
         zones = aiResult.zones || zones;
       } catch (error) {
-        throw new HttpError(502, 'Error al generar la descripción con IA.');
+        console.error("❌ FALLO EN VERTEX AI:", error.message, error.reason || "");
+        throw new HttpError(502, `Error al generar la descripción con IA: ${error.message}`);
       }
     }
 
