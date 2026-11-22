@@ -35,21 +35,25 @@ if (synth) {
    ========================================== */
 
 function selectSpanishVoice() {
+  if (!synth) return null;
+
+  availableVoices = synth.getVoices();
+
   if (!availableVoices.length) return null;
 
-  const preferences = [
-    voice => voice.lang.toLowerCase() === 'es-mx',
-    voice => voice.lang.toLowerCase() === 'es-us',
-    voice => voice.lang.toLowerCase() === 'es-es',
-    voice => voice.lang.toLowerCase().startsWith('es')
-  ];
+  const spanishVoices = availableVoices.filter(voice =>
+    voice.lang?.toLowerCase().startsWith('es')
+  );
 
-  for (const preference of preferences) {
-    const selected = availableVoices.find(preference);
-    if (selected) return selected;
-  }
+  if (!spanishVoices.length) return null;
 
-  return null;
+  return (
+    spanishVoices.find(voice =>
+      voice.lang.toLowerCase() === 'es-mx'
+    ) ||
+    spanishVoices.find(voice => voice.default) ||
+    spanishVoices[0]
+  );
 }
 
 /* ==========================================
@@ -188,10 +192,13 @@ function speak(track) {
     return;
   }
 
+  // Limpiar cualquier narración anterior.
+  synth.cancel();
+
   const utterance = new SpeechSynthesisUtterance(track.text);
 
   utterance.lang = 'es-MX';
-  utterance.rate = settings.rate;
+  utterance.rate = settings.rate || 1;
   utterance.pitch = 1;
   utterance.volume = 1;
 
@@ -201,12 +208,26 @@ function speak(track) {
     utterance.voice = selectedVoice;
   }
 
+  utterance.onstart = () => {
+    if (current === track) {
+      change(track, 'playing');
+    }
+  };
+
   utterance.onend = () => {
-    change(track, 'stopped');
+    if (current === track) {
+      change(track, 'stopped');
+    }
   };
 
   utterance.onerror = event => {
-    if (event.error !== 'canceled' && event.error !== 'interrupted') {
+    console.error('Error en síntesis de voz:', event.error);
+
+    if (
+      current === track &&
+      event.error !== 'canceled' &&
+      event.error !== 'interrupted'
+    ) {
       change(track, 'unavailable');
     }
   };
@@ -222,19 +243,19 @@ function speak(track) {
 
 export function pauseVoice(key) {
   if (!current || current.key !== key) return;
-
   if (current.state !== 'playing') return;
-
-  voice.pause();
 
   if (current.utterance && synth) {
     synth.pause();
+  } else if (voice) {
+    voice.pause();
   }
 
   change(current, 'paused');
 }
 
 export function playVoice(key, text, source, onState) {
+  // Reanudar reproducción pausada.
   if (
     current?.key === key &&
     current.state === 'paused'
@@ -245,7 +266,7 @@ export function playVoice(key, text, source, onState) {
 
     if (track.utterance && synth) {
       synth.resume();
-    } else {
+    } else if (voice) {
       voice.play().catch(() => {
         speak(track);
       });
@@ -254,6 +275,7 @@ export function playVoice(key, text, source, onState) {
     return;
   }
 
+  // Detener cualquier narración anterior.
   stopVoice();
 
   const track = {
@@ -269,6 +291,7 @@ export function playVoice(key, text, source, onState) {
 
   change(track, 'playing');
 
+  // Si no existe archivo de audio, utilizar síntesis de voz.
   if (!source) {
     speak(track);
     return;
@@ -278,7 +301,9 @@ export function playVoice(key, text, source, onState) {
   voice.playbackRate = settings.rate;
 
   voice.onended = () => {
-    change(track, 'stopped');
+    if (current === track) {
+      change(track, 'stopped');
+    }
   };
 
   voice.onerror = () => {
