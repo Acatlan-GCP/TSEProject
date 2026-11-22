@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prueba GCP - Arte al oído</title>
+  <link rel="stylesheet" href="./test-gcp.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Prueba de Servicios GCP</h1>
+    <p class="subtitle">Verifica que todas las conexiones funcionen correctamente</p>
+
+    <!-- Barra de estado -->
+    <div class="status-bar">
+      <div id="status-health" class="status-item loading">🏥 Health Check</div>
+      <div id="status-firestore" class="status-item loading">📦 Firestore</div>
+      <div id="status-storage" class="status-item loading">☁️ Storage</div>
+      <div id="status-auth" class="status-item loading">🔐 Auth</div>
+    </div>
+
+    <!-- Test 1: Health Check -->
+    <div class="test-section">
+      <h2>1️⃣ Health Check</h2>
+      <p>Verifica que el servidor esté corriendo y detecte la configuración de GCP</p>
+      <button type="button" data-test="health">Probar Health Check</button>
+      <div id="result-health" class="result" hidden></div>
+    </div>
+
+    <!-- Test 2: Firestore -->
+    <div class="test-section">
+      <h2>2️⃣ Firestore (Base de datos)</h2>
+      <p>Crea y lee un documento de prueba</p>
+      <button type="button" data-test="firestore">Probar Firestore</button>
+      <div id="result-firestore" class="result" hidden></div>
+    </div>
+
+    <!-- Test 3: Cloud Storage -->
+    <div class="test-section">
+      <h2>3️⃣ Cloud Storage (Archivos)</h2>
+      <p>Sube un archivo y obtén su URL</p>
+      <div class="form-group">
+        <div class="file-input-wrapper">
+          <label for="file-input" class="file-label">📎 Seleccionar archivo</label>
+          <input type="file" id="file-input" accept="image/*,.pdf,.txt">
+        </div>
+        <span id="file-name" class="file-name">Ningún archivo seleccionado</span>
+      </div>
+      <button type="button" data-test="storage">Subir archivo</button>
+      <div id="result-storage" class="result" hidden></div>
+    </div>
+
+    <!-- Test 4: Firebase Authentication -->
+    <div class="test-section">
+      <h2>4️⃣ Firebase Authentication</h2>
+      <p>Registra un nuevo usuario o inicia sesión</p>
+      <div class="form-group">
+        <label for="auth-email">Correo electrónico:</label>
+        <input type="email" id="auth-email" placeholder="test@ejemplo.com">
+      </div>
+      <div class="form-group">
+        <label for="auth-password">Contraseña (mínimo 6 caracteres):</label>
+        <input type="password" id="auth-password" placeholder="••••••••">
+      </div>
+      <button type="button" data-auth-action="register">📝 Registrar</button>
+      <button type="button" data-auth-action="login">🔑 Iniciar sesión</button>
+      <div id="result-auth" class="result" hidden></div>
+    </div>
+
+    <!-- Test 5: Catálogo -->
+    <div class="test-section">
+      <h2>5️⃣ Catálogo de Obrass</h2>
+      <p>Lee el catálogo de obras desde Firestore</p>
+      <button type="button" data-test="catalog">Probar Catálogo</button>
+      <div id="result-catalog" class="result" hidden></div>
+    </div>
+  </div>
+
+  <script src="./gcp.js" defer></script>
+</body>
+</html>

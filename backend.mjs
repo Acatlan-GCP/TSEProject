@@ -3,7 +3,7 @@ import {
   registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, commitPublication,
   saveObject, removeObject, signedObject, describeImage, synthesize
 } from './google.mjs';
-import { cloudEnabled } from './gcp.mjs'; // <-- CAMBIO CLAVE: Importar cloudEnabled desde gcp.mjs
+import { cloudEnabled, BUCKET_NAME } from './gcp.mjs';
 import { HttpError, artworkFields, normalizeNarration, normalizePreferences, text, verifyImage } from './model.mjs';
 
 const HTTP = (status, data, headers) => ({ status, data, headers });
@@ -193,5 +193,46 @@ export async function api(request, path) {
       return okay({ draft: await authoringData(document.data) });
     }
   }
+  if (path === '/api/prueba') {
+  if (method === 'POST') {
+    const body = await readBody(request, 1000);
+    await writeDoc('pruebas', 'test-doc', {
+      mensaje: body.mensaje || 'Prueba',
+      timestamp: body.timestamp || new Date().toISOString()
+    });
+    return okay({ exito: true, mensaje: 'Documento creado en Firestore' });
+  }
+  if (method === 'GET') {
+    const doc = await readDoc('pruebas', 'test-doc');
+    if (!doc) return okay({ mensaje: 'No hay documento de prueba aún' });
+    return okay({ id: 'test-doc', datos: doc.data });
+  }
+}
+
+// Test Storage: Subir archivo
+if (path === '/api/subir' && method === 'POST') {
+  // Leer el archivo del request (multipart/form-data)
+  const boundary = request.headers['content-type']?.match(/boundary=(.+)/)?.[1];
+  if (!boundary) throw new HttpError(400, 'Formato de archivo inválido');
+  
+  const chunks = [];
+  for await (const chunk of request.iterator({ destroyOnReturn: false })) {
+    chunks.push(chunk);
+  }
+  const buffer = Buffer.concat(chunks);
+  
+  // Parsear el archivo (simplificado para prueba)
+  const fileMatch = buffer.toString('binary').match(/filename="([^"]+)"/);
+  const fileName = fileMatch ? fileMatch[1] : `test-${Date.now()}.txt`;
+  const path = `test-uploads/${Date.now()}-${fileName}`;
+  
+  await saveObject(path, buffer, 'application/octet-stream');
+  return okay({ 
+    exito: true, 
+    mensaje: 'Archivo subido',
+    ruta: path,
+    url: `https://storage.googleapis.com/${BUCKET_NAME}/${path}`
+  });
+}
   throw notFound();
 }

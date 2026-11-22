@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111513">
+  <link rel="manifest" href="/assets/manifest.webmanifest">
+  <link rel="icon" href="/media/icon-192.png">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <title>Buscar · Arte al oído</title>
+</head>
+<body data-page="buscar">
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <header class="top"><div class="shell top-inner">
+    <a class="brand" href="/" aria-label="Arte al oído, inicio"><span class="brand-mark">≈</span>Arte<span class="brand-accent"> al oído</span></a>
+    <nav aria-label="Navegación principal"><a href="/galeria/">Galería</a><a href="/buscar/" aria-current="page">Buscar</a><a href="/ajustes/">Ajustes</a></nav>
+  </div></header>
+  <main id="contenido" class="shell" tabindex="-1">
+    <section class="page">
+      <a class="breadcrumbs" href="/">Inicio</a>
+      <div class="page-heading"><h1 tabindex="-1">Buscar una obra</h1><p class="muted">Di el nombre de una obra o de su artista. También puedes escribirlo.</p></div>
+      <div class="panel stack">
+        <button type="button" class="button primary" id="mic">Activar micrófono</button>
+        <form id="search-form" role="search"><label class="field"><span>Título, artista o categoría</span><input type="search" id="query" placeholder="Por ejemplo, Monet" autocomplete="off"></label></form>
+        <p class="provider-status muted" id="voice-search-status" role="status"></p>
+      </div>
+      <section class="results" aria-labelledby="results-heading"><h2 id="results-heading">Resultados</h2>
+        <p class="muted guidance" id="result-count" role="status"></p><div class="cards" id="results"></div>
+      </section>
+    </section>
+  </main>
+  <footer class="shell footer"><span>Arte al oído</span><span>Galería táctil y sonora</span></footer>
+  <div id="route-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <audio id="voice" preload="auto" playsinline></audio><audio id="ambience" preload="none" playsinline loop></audio><audio id="effect" preload="none" playsinline></audio>
+  <script type="module" src="/assets/js/app.js"></script>
+</body>
+</html>
