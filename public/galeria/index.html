@@ -18,13 +18,81 @@
   <main id="contenido" class="shell" tabindex="-1">
     <section class="page">
       <a class="breadcrumbs" href="/">Inicio</a>
-      <div class="page-heading"><h1 tabindex="-1">Galería</h1><p class="muted">Desliza hacia arriba o abajo en la ficha para recorrer las obras. También puedes usar los botones Anterior y Siguiente.</p></div>
-      <div class="catalog-focus" id="catalog-focus">
-        <div id="current-work"></div>
-        <div class="catalog-controls"><button type="button" class="button" id="previous">Anterior</button><button type="button" class="button" id="summary">Escuchar ficha</button><button type="button" class="button" id="next">Siguiente</button></div>
-        <p class="sr-only" id="catalog-status" role="status"></p>
+      <div class="page-heading">
+        <h1 tabindex="-1">Menú principal</h1>
+        <p class="muted">
+          Bienvenido a Arte al oído. Selecciona una opción
+          para comenzar a explorar.
+        </p>
       </div>
-      <div class="cards" id="catalog-cards"></div>
+
+      <section class="access-menu" aria-label="Menú principal">
+
+        <button
+          type="button"
+          class="button primary access-button"
+          id="welcome-audio">
+          <span aria-hidden="true">▶</span>
+          Escuchar bienvenida
+        </button>
+
+        <button
+          type="button"
+          class="button access-button"
+          id="explore-works">
+          <span aria-hidden="true">♫</span>
+          Explorar obras
+        </button>
+
+        <a class="button access-button" href="/buscar/">
+          <span aria-hidden="true">⌕</span>
+          Buscar una obra
+        </a>
+
+        <a class="button access-button" href="/ajustes/">
+          <span aria-hidden="true">⚙</span>
+          Configuración
+        </a>
+
+      </section>
+
+      <p
+        id="welcome-status"
+        class="sr-only"
+        role="status"
+        aria-live="polite">
+      </p>
+
+      <section id="gallery-content" hidden>
+        <div class="catalog-focus" id="catalog-focus">
+          <div id="current-work"></div>
+
+          <div class="catalog-controls">
+            <button type="button" class="button" id="previous">
+              Anterior
+            </button>
+
+            <button type="button" class="button" id="summary">
+              Escuchar ficha
+            </button>
+
+            <button type="button" class="button" id="next">
+              Siguiente
+            </button>
+          </div>
+
+          <p class="sr-only" id="catalog-status" role="status"></p>
+        </div>
+
+        <div class="cards" id="catalog-cards"></div>
+
+        <button
+          type="button"
+          class="button access-button"
+          id="back-to-menu">
+          Volver al menú principal
+        </button>
+      </section>
     </section>
   </main>
   <footer class="shell footer"><span>Arte al oído</span><span>Galería táctil y sonora</span></footer>

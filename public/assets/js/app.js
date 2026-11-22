@@ -87,30 +87,227 @@ function fillHome() {
   // Se conserva el resto de la aplicación sin modificaciones.
 }
 
+
 function fillGallery() {
   const current = document.querySelector('#current-work');
   const cards = document.querySelector('#catalog-cards');
   const caption = document.querySelector('#catalog-status');
   const focus = document.querySelector('#catalog-focus');
+
+  // Elementos del menú accesible
+  const menu = document.querySelector('.access-menu');
+  const galleryContent = document.querySelector('#gallery-content');
+  const exploreButton = document.querySelector('#explore-works');
+  const backButton = document.querySelector('#back-to-menu');
+
+  // Elementos de bienvenida
+  const welcomeButton = document.querySelector('#welcome-audio');
+  const welcomeStatus = document.querySelector('#welcome-status');
+  const welcomeKey = 'bienvenida-galeria';
+
+  // Actualizar la obra seleccionada
   const sync = () => {
     const work = catalog[selected];
     if (!work) return;
+
     const count = document.createElement('p');
     count.className = 'muted small';
-    count.textContent = `${selected + 1} de ${catalog.length} · ${work.category}`;
+    count.textContent =
+      `${selected + 1} de ${catalog.length} · ${work.category}`;
+
     const title = document.createElement('h2');
     const titleLink = document.createElement('a');
+
     titleLink.href = workLink(work);
     titleLink.textContent = work.title;
+
     title.append(titleLink);
+
     const artist = document.createElement('p');
     artist.className = 'muted';
     artist.textContent = `${work.artist} · ${work.year}`;
+
     const summary = document.createElement('p');
     summary.textContent = work.summary;
+
     current.replaceChildren(count, title, artist, summary);
+
     renderCards(cards, catalog, work.id);
   };
+
+  // Reproducir o pausar la bienvenida
+  if (welcomeButton) {
+    welcomeButton.addEventListener('click', () => {
+      const state = audioStatus(welcomeKey);
+
+      if (state === 'playing') {
+        pauseVoice(welcomeKey);
+        return;
+      }
+
+      playVoice(
+        welcomeKey,
+        welcome,
+        '/media/bienvenida.wav',
+        playbackState => {
+          if (playbackState === 'playing') {
+            welcomeButton.textContent = 'Pausar bienvenida';
+            welcomeButton.setAttribute('aria-pressed', 'true');
+
+            if (welcomeStatus) {
+              welcomeStatus.textContent =
+                'Reproduciendo mensaje de bienvenida.';
+            }
+          } else if (playbackState === 'paused') {
+            welcomeButton.textContent = 'Reanudar bienvenida';
+            welcomeButton.setAttribute('aria-pressed', 'false');
+
+            if (welcomeStatus) {
+              welcomeStatus.textContent = 'Bienvenida pausada.';
+            }
+          } else {
+            welcomeButton.textContent = 'Escuchar bienvenida';
+            welcomeButton.setAttribute('aria-pressed', 'false');
+
+            if (welcomeStatus) {
+              welcomeStatus.textContent =
+                'La bienvenida ha terminado o no está disponible.';
+            }
+          }
+        }
+      );
+    });
+
+    welcomeButton.setAttribute('aria-pressed', 'false');
+  }
+
+  // Mostrar la galería
+  function showGallery() {
+    if (!galleryContent) return;
+
+    if (menu) menu.hidden = true;
+
+    galleryContent.hidden = false;
+
+    const heading = current.querySelector('h2');
+
+    if (heading) {
+      heading.setAttribute('tabindex', '-1');
+      heading.focus();
+    }
+  }
+
+  // Regresar al menú principal
+  function showMenu() {
+    stopVoice();
+
+    if (galleryContent) {
+      galleryContent.hidden = true;
+    }
+
+    if (menu) {
+      menu.hidden = false;
+    }
+
+    if (welcomeButton) {
+      welcomeButton.textContent = 'Escuchar bienvenida';
+      welcomeButton.setAttribute('aria-pressed', 'false');
+    }
+
+    if (exploreButton) {
+      exploreButton.focus();
+    }
+  }
+
+  exploreButton?.addEventListener('click', showGallery);
+  backButton?.addEventListener('click', showMenu);
+
+  // Escuchar la descripción de la obra
+  const preview = () => {
+    const work = catalog[selected];
+    if (!work) return;
+
+    playVoice(
+      `ficha-${work.id}`,
+      `${work.title}, de ${work.artist}. ${work.summary}`,
+      work.summaryAudio,
+      state => {
+        document.querySelector('#summary').textContent =
+          state === 'playing' ? 'Pausar ficha' : 'Escuchar ficha';
+
+        if (state === 'unavailable') {
+          caption.textContent =
+            `${work.title}, de ${work.artist}. ${work.summary}`;
+        }
+      }
+    );
+  };
+
+  // Cambiar de obra
+  const step = delta => {
+    stopVoice();
+
+    selected = (selected + delta + catalog.length) % catalog.length;
+
+    sync();
+
+    if (preferences.automatic) {
+      preview();
+    } else {
+      caption.textContent =
+        `${selected + 1} de ${catalog.length}. ${catalog[selected].title}`;
+    }
+  };
+
+  document.querySelector('#previous').onclick = () => step(-1);
+  document.querySelector('#next').onclick = () => step(1);
+
+  document.querySelector('#summary').onclick = () => {
+    const key = `ficha-${catalog[selected].id}`;
+
+    if (audioStatus(key) === 'playing') {
+      pauseVoice(key);
+    } else {
+      preview();
+    }
+  };
+
+  // Navegación táctil existente
+  let start;
+
+  focus.onpointerdown = event => {
+    if (event.pointerType !== 'touch' ||
+        event.target.closest('a,button')) return;
+
+    start = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY
+    };
+
+    focus.setPointerCapture(event.pointerId);
+  };
+
+  focus.onpointerup = event => {
+    if (!start || event.pointerId !== start.id) return;
+
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+
+    start = null;
+
+    if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) {
+      step(dy < 0 ? 1 : -1);
+    }
+  };
+
+  focus.onpointercancel = () => {
+    start = null;
+  };
+
+  // Preparar la primera obra sin mostrarla todavía
+  sync();
+}
   const preview = () => {
     const work = catalog[selected];
     if (!work) return;
@@ -148,7 +345,6 @@ function fillGallery() {
   };
   focus.onpointercancel = () => { start = null; };
   sync();
-}
 
 function fillSearch() {
   const input = document.querySelector('#query');

@@ -1229,3 +1229,224 @@ body[data-page="curaduria"] #drafts > * {
 body[data-page="curaduria"] #review {
   margin-top: 1rem;
 }
+
+/* =========================================
+   INTERFAZ ACCESIBLE — ARTE AL OÍDO
+   Navegación sencilla y botones grandes
+   ========================================= */
+
+/* Nombre de la aplicación */
+body:not(.home-screen) .brand {
+  font-size: 1rem;
+  letter-spacing: -.02em;
+}
+
+body:not(.home-screen) .brand-mark {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+/* Navegación principal */
+body:not(.home-screen) .top nav {
+  gap: .7rem;
+}
+
+body:not(.home-screen) .top nav a {
+  min-height: 3.5rem;
+  padding: .8rem 1rem;
+  font-size: 1rem;
+  border: 1px solid var(--line);
+  border-radius: .8rem;
+}
+
+/* Títulos más pequeños */
+body:not(.home-screen) .page-heading h1 {
+  font-family: Arial, sans-serif;
+  font-size: clamp(1.65rem, 4vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.2;
+}
+
+body:not(.home-screen) #current-work h2,
+body:not(.home-screen) .work-grid h2 {
+  font-family: Arial, sans-serif;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+  line-height: 1.3;
+}
+
+/* Botones grandes */
+body:not(.home-screen) .button {
+  min-height: 4.2rem;
+  padding: 1rem 1.25rem;
+  border-radius: .85rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+/* Botones de navegación de la galería */
+body[data-page="galeria"] .catalog-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .85rem;
+}
+
+body[data-page="galeria"] .catalog-controls .button {
+  width: 100%;
+  min-height: 4.5rem;
+  font-size: 1.1rem;
+}
+
+/* Ficha de obra */
+body[data-page="galeria"] #current-work {
+  padding: .5rem;
+}
+
+body[data-page="galeria"] #current-work p {
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+/* Botones para explorar zonas */
+body[data-page="obra"] .zone-list {
+  gap: .85rem;
+}
+
+body[data-page="obra"] .zone-list .button {
+  min-height: 4.5rem;
+  padding: 1rem;
+  font-size: 1.05rem;
+}
+
+/* Botones de búsqueda y configuración */
+body[data-page="buscar"] #mic,
+body[data-page="ajustes"] .stack .button {
+  width: 100%;
+  min-height: 4.5rem;
+}
+
+/* Tarjetas de obras más sencillas */
+body:not(.home-screen) .card-title {
+  font-size: .98rem;
+}
+
+body:not(.home-screen) .card-meta {
+  font-size: .85rem;
+}
+
+/* Más espacio entre controles */
+body:not(.home-screen) .panel,
+body:not(.home-screen) .catalog-focus {
+  padding: 1.25rem;
+}
+
+/* Indicador de enfoque para teclado */
+body:not(.home-screen) :focus-visible {
+  outline: 4px solid #FFD75E;
+  outline-offset: 5px;
+}
+
+/* Adaptación para pantallas pequeñas */
+@media (max-width: 42rem) {
+  body:not(.home-screen) .top-inner {
+    align-items: stretch;
+  }
+
+  body:not(.home-screen) .top nav a {
+    min-height: 3.8rem;
+    font-size: .95rem;
+  }
+
+  body[data-page="galeria"] .catalog-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* =========================================
+   MENÚ ACCESIBLE DE ARTE AL OÍDO
+   ========================================= */
+
+body[data-page="galeria"] .access-menu {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  width: 100%;
+  max-width: 620px;
+  margin: 2rem auto;
+}
+
+body[data-page="galeria"] .access-button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1.2rem;
+
+  width: 100%;
+  min-height: 88px;
+  padding: 1.25rem;
+
+  border: 2px solid var(--line);
+  border-radius: 14px;
+
+  background: var(--panel);
+  color: var(--ink);
+
+  font-size: 1.15rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+body[data-page="galeria"] .access-button span {
+  font-size: 1.6rem;
+  min-width: 2rem;
+  text-align: center;
+}
+
+body[data-page="galeria"] .access-button.primary {
+  background: var(--accent);
+  color: #09203A;
+  border-color: var(--accent);
+}
+
+body[data-page="galeria"] .access-button:focus-visible {
+  outline: 4px solid #FFD75E;
+  outline-offset: 5px;
+}
+
+/* Títulos discretos y fáciles de leer */
+body[data-page="galeria"] .page-heading h1 {
+  font-size: 1.8rem;
+  line-height: 1.3;
+}
+
+body[data-page="galeria"] #current-work h2 {
+  font-size: 1.4rem;
+  line-height: 1.4;
+}
+
+/* Ocultar correctamente el contenido no seleccionado */
+body[data-page="galeria"] [hidden] {
+  display: none !important;
+}
+
+/* Espacio entre controles de obras */
+body[data-page="galeria"] .catalog-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: .8rem;
+}
+
+body[data-page="galeria"] .catalog-controls .button {
+  min-height: 64px;
+  font-size: 1.05rem;
+}
+
+@media (max-width: 600px) {
+  body[data-page="galeria"] .access-button {
+    min-height: 80px;
+    font-size: 1.05rem;
+  }
+}
