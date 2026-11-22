@@ -1,8 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  cloudEnabled, registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, commitPublication,
+  registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, commitPublication,
   saveObject, removeObject, signedObject, describeImage, synthesize
 } from './google.mjs';
+import { cloudEnabled } from './gcp.mjs'; // <-- CAMBIO CLAVE: Importar cloudEnabled desde gcp.mjs
 import { HttpError, artworkFields, normalizeNarration, normalizePreferences, text, verifyImage } from './model.mjs';
 
 const HTTP = (status, data, headers) => ({ status, data, headers });
