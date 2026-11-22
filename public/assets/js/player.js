@@ -37,19 +37,25 @@ if (synth) {
 function selectSpanishVoice() {
   if (!availableVoices.length) return null;
 
-  const preferences = [
-    voice => voice.lang.toLowerCase() === 'es-mx',
-    voice => voice.lang.toLowerCase() === 'es-us',
-    voice => voice.lang.toLowerCase() === 'es-es',
-    voice => voice.lang.toLowerCase().startsWith('es')
-  ];
+  const spanishVoices = availableVoices.filter(voice =>
+    voice.lang.toLowerCase().startsWith('es')
+  );
 
-  for (const preference of preferences) {
-    const selected = availableVoices.find(preference);
-    if (selected) return selected;
-  }
+  if (!spanishVoices.length) return null;
 
-  return null;
+  // Preferir voces en español de México.
+  const mexicanVoice = spanishVoices.find(voice =>
+    voice.lang.toLowerCase() === 'es-mx'
+  );
+
+  if (mexicanVoice) return mexicanVoice;
+
+  // Si no existe, utilizar otra voz en español.
+  const defaultVoice = spanishVoices.find(voice =>
+    voice.default
+  );
+
+  return defaultVoice || spanishVoices[0];
 }
 
 /* ==========================================
@@ -191,9 +197,11 @@ function speak(track) {
   const utterance = new SpeechSynthesisUtterance(track.text);
 
   utterance.lang = 'es-MX';
-  utterance.rate = settings.rate;
-  utterance.pitch = 1;
-  utterance.volume = 1;
+
+  // Configuración de narración natural.
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  utterance.volume = 1.0;
 
   const selectedVoice = selectSpanishVoice();
 
@@ -206,7 +214,10 @@ function speak(track) {
   };
 
   utterance.onerror = event => {
-    if (event.error !== 'canceled' && event.error !== 'interrupted') {
+    if (
+      event.error !== 'canceled' &&
+      event.error !== 'interrupted'
+    ) {
       change(track, 'unavailable');
     }
   };

@@ -136,87 +136,88 @@ function fillGallery() {
   };
 
   // Reproducir o pausar la bienvenida
+  // ==========================================
+  // BIENVENIDA CON SÍNTESIS DE VOZ
+  // ==========================================
+
   if (welcomeButton) {
+    welcomeButton.setAttribute('aria-pressed', 'false');
+
     welcomeButton.addEventListener('click', () => {
       const state = audioStatus(welcomeKey);
 
+      // Si está reproduciéndose, pausar.
       if (state === 'playing') {
         pauseVoice(welcomeKey);
         return;
       }
 
+      // Reproducir directamente el texto mediante la voz
+      // disponible en el navegador, sin depender del WAV.
       playVoice(
         welcomeKey,
         welcome,
-        '/media/bienvenida.wav',
+        null,
         playbackState => {
           if (playbackState === 'playing') {
             welcomeButton.textContent = 'Pausar bienvenida';
             welcomeButton.setAttribute('aria-pressed', 'true');
 
-            if (welcomeStatus) {
-              welcomeStatus.textContent =
-                'Reproduciendo mensaje de bienvenida.';
-            }
-          } else if (playbackState === 'paused') {
+            welcomeStatus.textContent =
+              'Reproduciendo mensaje de bienvenida.';
+          }
+
+          else if (playbackState === 'paused') {
             welcomeButton.textContent = 'Reanudar bienvenida';
             welcomeButton.setAttribute('aria-pressed', 'false');
 
-            if (welcomeStatus) {
-              welcomeStatus.textContent = 'Bienvenida pausada.';
-            }
-          } else {
+            welcomeStatus.textContent =
+              'Bienvenida pausada.';
+          }
+
+          else if (playbackState === 'unavailable') {
+            welcomeButton.textContent = 'Intentar nuevamente';
+            welcomeButton.setAttribute('aria-pressed', 'false');
+
+            welcomeStatus.textContent =
+              'No fue posible reproducir la bienvenida. Comprueba que tu navegador permita la síntesis de voz.';
+          }
+
+          else {
             welcomeButton.textContent = 'Escuchar bienvenida';
             welcomeButton.setAttribute('aria-pressed', 'false');
 
-            if (welcomeStatus) {
-              welcomeStatus.textContent =
-                'La bienvenida ha terminado o no está disponible.';
-            }
+            welcomeStatus.textContent =
+              'La bienvenida ha terminado.';
           }
         }
       );
     });
-
-    welcomeButton.setAttribute('aria-pressed', 'false');
   }
 
   // Mostrar la galería
   function showGallery() {
-    if (!galleryContent) return;
+  if (!galleryContent) return;
 
-    if (menu) menu.hidden = true;
+  galleryContent.hidden = false;
 
-    galleryContent.hidden = false;
+  const heading = current.querySelector('h2');
 
-    const heading = current.querySelector('h2');
-
-    if (heading) {
-      heading.setAttribute('tabindex', '-1');
-      heading.focus();
-    }
+  if (heading) {
+    heading.setAttribute('tabindex', '-1');
+    heading.focus();
+  }
   }
 
-  // Regresar al menú principal
   function showMenu() {
-    stopVoice();
+    if (!menu) return;
 
-    if (galleryContent) {
-      galleryContent.hidden = true;
-    }
+    menu.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
 
-    if (menu) {
-      menu.hidden = false;
-    }
-
-    if (welcomeButton) {
-      welcomeButton.textContent = 'Escuchar bienvenida';
-      welcomeButton.setAttribute('aria-pressed', 'false');
-    }
-
-    if (exploreButton) {
-      exploreButton.focus();
-    }
+    exploreButton?.focus();
   }
 
   exploreButton?.addEventListener('click', showGallery);
