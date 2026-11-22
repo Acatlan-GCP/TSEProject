@@ -4,8 +4,8 @@ import { createServer } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { api } from './backend.mjs';
-import { cloudEnabled } from './google.mjs';
 import { HttpError } from './model.mjs';
+import { cloudEnabled, PROJECT_ID, BUCKET_NAME, REGION } from './gcp.mjs';
 
 const root = fileURLToPath(new URL('./public/', import.meta.url));
 const staticTypes = {
@@ -94,5 +94,12 @@ export function createApp() {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 8080);
   const host = process.env.HOST || (process.env.K_SERVICE ? '0.0.0.0' : '127.0.0.1');
-  createApp().listen(port, host, () => console.log(`Arte al oído en http://${host}:${port} (${cloudEnabled ? 'Google Cloud' : 'catálogo incluido'})`));
+  createApp().listen(port, host, () => {
+    console.log(`Arte al oído en http://${host}:${port}`);
+    if (cloudEnabled) {
+      console.log(`☁️  Proyecto: ${PROJECT_ID} | Bucket: ${BUCKET_NAME} | Región: ${REGION}`);
+    } else {
+      console.log('⚠️  Sin GCP_PROJECT_ID / GCP_BUCKET_NAME: modo catálogo local.');
+    }
+  });
 }
