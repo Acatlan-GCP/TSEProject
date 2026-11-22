@@ -30,13 +30,18 @@ export function parseRange(range, size) {
 
 async function serveFile(request, response, path) {
   if (!['GET', 'HEAD'].includes(request.method)) throw new HttpError(405, 'Método no admitido.');
-  const target = resolve(root, '.' + (path === '/' ? '/index.html' : path));
+  const requestedPath = ['/test-gcp.html', '/test.gcp.html'].includes(path) ? '/test-gcp/' : path;
+  let target = resolve(root, '.' + (requestedPath === '/' ? '/index.html' : requestedPath));
+  if (!target.startsWith(resolve(root) + sep)) throw new HttpError(404, 'No se encontró el recurso.');
+  const requestedFile = await stat(target).catch(() => null);
+  if (requestedFile?.isDirectory()) target = resolve(target, 'index.html');
   const type = staticTypes[extname(target)];
   if (!target.startsWith(resolve(root) + sep) || !type) throw new HttpError(404, 'No se encontró el recurso.');
   const file = await stat(target).catch(() => null);
   if (!file?.isFile()) throw new HttpError(404, 'No se encontró el recurso.');
   const range = parseRange(request.headers.range, file.size);
   const headers = { 'content-type': type, 'cache-control': 'no-cache', 'accept-ranges': 'bytes' };
+  if (target === resolve(root, 'assets/js/sw.js')) headers['service-worker-allowed'] = '/';
   if (range === false) {
     response.writeHead(416, { ...headers, 'content-range': `bytes */${file.size}` });
     return response.end();

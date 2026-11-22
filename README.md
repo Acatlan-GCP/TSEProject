@@ -10,6 +10,8 @@ Arte al oído es una galería móvil instalable en español de México. Permite 
 
 Para usar la PWA desde otro dispositivo, abre el enlace HTTPS del despliegue. En Android, usa la opción de instalar aplicación del navegador cuando aparezca. En iOS, abre el enlace en Safari y usa Compartir y Agregar a inicio. Después de la primera carga en línea, la PWA guarda la galería incluida para usarla sin conexión.
 
+Cada página vive en su propia carpeta dentro de `public/`: `/galeria/`, `/buscar/`, `/ajustes/`, `/obra/`, `/cuenta/` y `/curaduria/`. La portada está en `public/index.html`; los recursos compartidos están en `public/assets/`, y la prueba de servicios GCP en `public/test-gcp/` (también disponible como `/test-gcp.html` y `/test.gcp.html`).
+
 ## Interacción y accesibilidad
 
 - Desde el inicio puedes explorar la galería, buscar por voz o abrir los ajustes. **Escuchar bienvenida** inicia la guía tras la activación que requieren los navegadores móviles.
@@ -78,7 +80,7 @@ gcloud run deploy arte-al-oido --project "$PROJECT_ID" --region "$REGION" --sour
 
 Cloud Build compila el contenedor a partir del Dockerfile. Si tu proyecto exige una identidad de compilación explícita, configura la cuenta de compilación con el rol **Cloud Run Builder**. El despliegue anterior habilita el catálogo público. Cuenta, preferencias y curaduría siguen requiriendo autorización en la API. [Desplegar desde código fuente](https://cloud.google.com/run/docs/deploying-source-code) · [URLs firmadas de Storage](https://cloud.google.com/storage/docs/access-control/signing-urls-with-helpers)
 
-Abre la URL HTTPS devuelta por Cloud Run y confirma que `/healthz` devuelve `"cloud":true`. Ese indicador comprueba la configuración. Para validar credenciales y permisos, inicia sesión, guarda y recupera un ajuste y publica una obra de prueba. Verifica que se reproduzcan su introducción y todas sus zonas desde otro dispositivo. Las sesiones en esta versión permanecen en memoria y requieren iniciar sesión de nuevo tras recargar o cuando vence el token. La variable opcional `FIRESTORE_DATABASE` selecciona una base distinta de `(default)`. Para varios curadores, usa declaraciones personalizadas de Firebase o una lista de UIDs separada por comas en el archivo de variables de entorno de Cloud Run. [Verificación de tokens de Firebase](https://firebase.google.com/docs/auth/admin/verify-id-tokens)
+Abre la URL HTTPS devuelta por Cloud Run y confirma que `/healthz` devuelve `"cloud":true`. Ese indicador comprueba la configuración. Para validar credenciales y permisos, inicia sesión, guarda y recupera un ajuste y publica una obra de prueba. Verifica que se reproduzcan su introducción y todas sus zonas desde otro dispositivo. La sesión se conserva en `sessionStorage` durante la pestaña del navegador; al cerrarla tendrás que iniciar sesión de nuevo o cuando venza el token. La variable opcional `FIRESTORE_DATABASE` selecciona una base distinta de `(default)`. Para varios curadores, usa declaraciones personalizadas de Firebase o una lista de UIDs separada por comas en el archivo de variables de entorno de Cloud Run. [Verificación de tokens de Firebase](https://firebase.google.com/docs/auth/admin/verify-id-tokens)
 
 ## Costos del piloto
 

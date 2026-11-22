@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111513">
+  <link rel="manifest" href="/assets/manifest.webmanifest">
+  <link rel="icon" href="/media/icon-192.png">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <title>Curaduría · Arte al oído</title>
+</head>
+<body data-page="curaduria">
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <header class="top"><div class="shell top-inner">
+    <a class="brand" href="/" aria-label="Arte al oído, inicio"><span class="brand-mark">≈</span>Arte<span class="brand-accent"> al oído</span></a>
+    <nav aria-label="Navegación principal"><a href="/galeria/">Galería</a><a href="/buscar/">Buscar</a><a href="/ajustes/">Ajustes</a></nav>
+  </div></header>
+  <main id="contenido" class="shell" tabindex="-1">
+    <section class="page">
+      <a class="breadcrumbs" href="/cuenta/">Cuenta</a>
+      <div class="page-heading"><h1 tabindex="-1">Curaduría</h1></div>
+      <div class="stack">
+        <form id="generate" class="panel stack">
+          <h2>Nueva obra</h2>
+          <label class="field"><span>Título</span><input name="title" maxlength="120" required></label>
+          <label class="field"><span>Artista</span><input name="artist" maxlength="120" required></label>
+          <div class="field-grid">
+            <label class="field"><span>Año o periodo</span><input name="year" maxlength="40" required></label>
+            <label class="field"><span>Técnica</span><input name="technique" maxlength="100" required></label>
+          </div>
+          <label class="field"><span>Categoría</span><input name="category" maxlength="80" required></label>
+          <label class="field"><span>Enlace a la ficha original (opcional)</span><input name="source" type="url" maxlength="400"></label>
+          <label class="field"><span>Paisaje sonoro</span><select name="sound"><option value="mar">Mar</option><option value="cuarto">Interior</option><option value="estanque">Estanque</option><option value="">Silencio</option></select></label>
+          <label class="field"><span>Imagen JPG, PNG o WebP, hasta 6 MB</span><input name="art" type="file" accept="image/jpeg,image/png,image/webp" required></label>
+          <button type="submit" class="button primary">Generar borrador con Gemini</button>
+          <p id="draft-status" role="status"></p>
+        </form>
+        <section class="panel stack"><h2>Borradores por revisar</h2><div id="drafts" class="stack"></div></section>
+        <div id="review"></div>
+      </div>
+    </section>
+  </main>
+  <footer class="shell footer"><span>Arte al oído</span><span>Galería táctil y sonora</span></footer>
+  <div id="route-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+  <audio id="voice" preload="auto" playsinline></audio><audio id="ambience" preload="none" playsinline loop></audio><audio id="effect" preload="none" playsinline></audio>
+  <script type="module" src="/assets/js/app.js"></script>
+</body>
+</html>

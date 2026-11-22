@@ -4,7 +4,7 @@
   "short_name": "Arte al oído",
   "description": "Galería de arte táctil y sonora",
   "lang": "es-MX",
-  "start_url": "/#inicio",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#111513",

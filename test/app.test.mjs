@@ -4,7 +4,7 @@ import { once } from 'node:events';
 import { access } from 'node:fs/promises';
 import { createApp, parseRange } from '../server.mjs';
 import { normalizeNarration, normalizePreferences, safeSource } from '../model.mjs';
-import { works } from '../public/works.js';
+import { works } from '../public/assets/js/works.js';
 
 test('los audios admiten intervalos abiertos y parciales', () => {
   assert.deepEqual(parseRange('bytes=0-1', 8), { start: 0, end: 1 });
@@ -41,6 +41,23 @@ test('servidor permite ejecutar el catálogo local y entrega audio parcial', asy
   const index = await fetch(url);
   assert.equal(index.status, 200);
   assert.match(await index.text(), /Arte al oído/);
+  assert.match(index.headers.get('content-security-policy'), /script-src 'self'/);
+  assert.doesNotMatch(index.headers.get('content-security-policy'), /script-src[^;]*unsafe-inline/);
+  for (const route of ['/galeria/', '/buscar/', '/ajustes/', '/obra/', '/cuenta/', '/curaduria/', '/test-gcp/', '/test-gcp.html', '/test.gcp.html']) {
+    const page = await fetch(`${url}${route}`);
+    assert.equal(page.status, 200, `${route} debe servir una página`);
+    assert.match(page.headers.get('content-type'), /text\/html/);
+  }
+  const testPage = await fetch(`${url}/test-gcp/`);
+  assert.match(await testPage.text(), /gcp\.js/);
+  const testScript = await fetch(`${url}/test-gcp/gcp.js`);
+  assert.equal(testScript.status, 200);
+  for (const asset of ['/assets/css/styles.css', '/assets/js/app.js', '/assets/js/account.js', '/assets/js/player.js', '/assets/js/works.js', '/assets/manifest.webmanifest']) {
+    assert.equal((await fetch(`${url}${asset}`)).status, 200, `${asset} debe estar disponible`);
+  }
+  const worker = await fetch(`${url}/assets/js/sw.js`);
+  assert.equal(worker.status, 200);
+  assert.equal(worker.headers.get('service-worker-allowed'), '/');
   const config = await fetch(`${url}/api/config`);
   assert.deepEqual(await config.json(), { cloud: false, registration: false });
   const restricted = await fetch(`${url}/api/curation/drafts`);
