@@ -1,6 +1,8 @@
 const version = 'arte-al-oido-1.0.3';
 const shell = [
-  '/', '/styles.css', '/app.js', '/works.js', '/player.js', '/account.js', '/manifest.webmanifest',
+  '/', '/galeria/', '/buscar/', '/ajustes/', '/obra/', '/cuenta/', '/curaduria/',
+  '/assets/css/styles.css', '/assets/js/app.js', '/assets/js/works.js', '/assets/js/player.js',
+  '/assets/js/account.js', '/assets/manifest.webmanifest',
   '/media/icon-192.png', '/media/icon-512.png'
 ];
 const art = {
@@ -50,7 +52,7 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(version);
     if (request.mode === 'navigate') {
-      try { return await fetch(request); } catch { return cache.match('/'); }
+      try { return await fetch(request); } catch { return cache.match(url.pathname) || cache.match('/'); }
     }
     if (url.pathname === '/works.js') {
       try {

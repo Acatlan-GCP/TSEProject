@@ -22,29 +22,50 @@ let certificates;
 let certificateExpiry = 0;
 
 async function credential() {
+  // 1. Token forzado por variable
   if (process.env.GOOGLE_OAUTH_ACCESS_TOKEN) return process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
+  
+  // 2. Caché válido
   if (credentials && credentials.expires > Date.now()) return credentials.value;
   
-  // 1. Intentar obtener del servidor de metadatos (Cloud Run)
+  // 3. Metadata server (Cloud Run)
   try {
     const response = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
       headers: { 'Metadata-Flavor': 'Google' }, 
-      signal: AbortSignal.timeout(1500) 
+      signal: AbortSignal.timeout(1500)
     });
     if (response.ok) {
       const { access_token, expires_in } = await response.json();
       credentials = { value: access_token, expires: Date.now() + (expires_in - 90) * 1000 };
       return access_token;
     }
-  } catch (e) { /* Ignorar, no estamos en GCP */ }
+  } catch (e) { /* No estamos en GCP */ }
 
-  // 2. FALLBACK LOCAL: Si tienes un archivo JSON de credenciales, úsalo (Google Auth Library lo maneja automáticamente en las llamadas, pero si necesitas el token explícito, este es el método seguro sin gcloud)
-  // Nota: Para las llamadas REST nativas que haces, si GOOGLE_APPLICATION_CREDENTIALS está definido, las librerías oficiales lo usan, pero como haces fetch manual, 
-  // la forma más fácil de probar local SIN gcloud es simplemente desactivar cloudEnabled localmente o usar un proxy. 
-  // Sin embargo, para que tu código no truene, devolveremos un token dummy si no estamos en GCP y no hay gcloud, 
-  // PERO lo ideal es que localmente uses el "modo catálogo local" (sin variables de entorno) o instales gcloud.
-  
-  throw new Error('Modo local sin gcloud: Establece GOOGLE_APPLICATION_CREDENTIALS o ejecuta en un entorno con gcloud instalado.');
+  // 4. Archivo JSON de credenciales (desarrollo local)
+  const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
+  if (credPath) {
+    try {
+      const { readFile } = await import('node:fs/promises');
+      const credFile = JSON.parse(await readFile(credPath, 'utf8'));
+      
+      // Usar el token del archivo (si es tipo "authorized_user" o "service_account")
+      // Para service_account necesitamos hacer un JWT, pero para testing rápido
+      // usamos google-auth-library si está disponible
+      const { GoogleAuth } = await import('google-auth-library');
+      const auth = new GoogleAuth({
+        keyFile: credPath,
+        scopes: ['https://www.googleapis.com/auth/cloud-platform']
+      });
+      const client = await auth.getClient();
+      const token = await client.getAccessToken();
+      credentials = { value: token.token, expires: Date.now() + 3500 * 1000 };
+      return token.token;
+    } catch (err) {
+      throw new Error(`Error con credenciales JSON: ${err.message}. Instala: npm install google-auth-library`);
+    }
+  }
+
+  throw new Error('No hay credenciales disponibles. Configura GOOGLE_APPLICATION_CREDENTIALS o instala gcloud.');
 }
 
 export class GoogleError extends Error {
