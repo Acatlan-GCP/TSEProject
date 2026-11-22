@@ -1,48 +1,37 @@
-
 /* =========================================
    ARTE AL OÍDO
    Identidad visual azul y dorada
    ========================================= */
-
 :root {
   color-scheme: dark;
-
   --bg: #091827;
   --panel: #10243A;
   --panel2: #17334F;
   --line: #34516C;
-
   --ink: #F4F1E8;
   --muted: #C0CBD7;
-
   --accent: #D4A72C;
   --deep: #09203A;
-
   font-family: Arial, "Helvetica Neue", sans-serif;
   font-size: 100%;
   background: var(--bg);
   color: var(--ink);
 }
-
 * {
   box-sizing: border-box;
 }
-
 html {
   scroll-behavior: smooth;
 }
-
 body {
   margin: 0;
   min-width: 0;
   background: var(--bg);
   color: var(--ink);
 }
-
 body.large {
   font-size: 1.22rem;
 }
-
 body.contrast {
   --bg: #000;
   --panel: #080F19;
@@ -53,14 +42,12 @@ body.contrast {
   --accent: #FFD75E;
   --deep: #000;
 }
-
 button,
 input,
 select,
 textarea {
   font: inherit;
 }
-
 button,
 input,
 select,
@@ -68,22 +55,18 @@ textarea,
 a {
   -webkit-tap-highlight-color: transparent;
 }
-
 a {
   color: inherit;
   text-decoration: none;
 }
-
 button {
   color: inherit;
   cursor: pointer;
 }
-
 button:disabled {
   opacity: .6;
   cursor: default;
 }
-
 button,
 a,
 input,
@@ -92,86 +75,68 @@ textarea,
 [tabindex] {
   outline-offset: 4px;
 }
-
 :focus-visible {
   outline: 3px solid #E8BD52;
 }
-
 main:focus,
 h1:focus {
   outline: none;
 }
-
 main {
   min-height: 55vh;
 }
-
 img {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 h1,
 h2,
 h3,
 p {
   margin: 0;
 }
-
 p {
   line-height: 1.6;
 }
-
 h1,
 h2 {
   font-family: Georgia, "Times New Roman", serif;
   font-weight: 400;
   letter-spacing: -.045em;
 }
-
 h1 {
   font-size: clamp(2.5em, 7vw, 5.6em);
   line-height: .98;
 }
-
 h2 {
   font-size: clamp(1.85em, 4vw, 3em);
   line-height: 1.09;
 }
-
 h3 {
   font-size: 1.08em;
 }
-
 small,
 .small {
   font-size: .91em;
 }
-
 .muted {
   color: var(--muted);
 }
-
 .accent {
   color: var(--accent);
 }
-
 /* Estructura */
-
 .shell {
   width: min(100% - 2rem, 75rem);
   margin-inline: auto;
 }
-
 /* Navegación */
-
 .top {
   border-bottom: 1px solid var(--line);
   background: #071522;
 }
-
 .top-inner {
   min-height: 4.2rem;
   display: flex;
@@ -180,7 +145,6 @@ small,
   gap: .8rem;
   flex-wrap: wrap;
 }
-
 .brand {
   display: inline-flex;
   align-items: center;
@@ -190,11 +154,9 @@ small,
   letter-spacing: -.06em;
   white-space: pre;
 }
-
 .brand-accent {
   color: var(--accent);
 }
-
 .brand-mark {
   width: 2.12rem;
   height: 2.12rem;
@@ -205,14 +167,12 @@ small,
   place-items: center;
   margin-right: .52rem;
 }
-
 .top nav {
   display: flex;
   flex-wrap: wrap;
   gap: .45rem;
   align-items: center;
 }
-
 .top nav a {
   min-height: 3rem;
   display: inline-flex;
@@ -225,27 +185,22 @@ small,
   font-weight: 600;
   transition: background .2s ease, color .2s ease;
 }
-
 .top nav a:hover,
 .top nav a[aria-current] {
   background: var(--panel2);
   color: var(--accent);
 }
-
 .icon {
   width: 1.17rem;
   height: 1.17rem;
   flex: none;
   vertical-align: middle;
 }
-
 .brand-mark .icon {
   width: 1.31rem;
   height: 1.31rem;
 }
-
 /* Accesibilidad */
-
 .skip {
   position: absolute;
   z-index: 10;
@@ -256,11 +211,9 @@ small,
   color: #09203A;
   transform: translateY(-200%);
 }
-
 .skip:focus {
   transform: none;
 }
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -269,20 +222,16 @@ small,
   clip-path: inset(50%);
   white-space: nowrap;
 }
-
 /* Portada original: estilos conservados */
-
 .hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.75rem;
   padding-block: 2.7rem 2rem;
 }
-
 .hero-copy {
   align-self: center;
 }
-
 .eyebrow {
   display: inline-flex;
   gap: .5rem;
@@ -294,36 +243,30 @@ small,
   text-transform: uppercase;
   margin-bottom: 1rem;
 }
-
 .hero h1 em {
   color: var(--accent);
   font-weight: 400;
 }
-
 .hero-copy > p {
   max-width: 36ch;
   color: var(--muted);
   margin-block: 1.3rem 1.7rem;
   font-size: 1.08em;
 }
-
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
   gap: .65rem;
 }
-
 .hero-actions > .primary {
   flex-basis: 100%;
   max-width: max-content;
 }
-
 .hero-actions .welcome {
   flex-basis: 100%;
   justify-content: flex-start;
   padding-inline: .15rem;
 }
-
 .hero-art {
   min-height: 17rem;
   aspect-ratio: 1.38;
@@ -334,7 +277,6 @@ small,
   background: #17334F;
   isolation: isolate;
 }
-
 .hero-art::after {
   content: "";
   position: absolute;
@@ -345,14 +287,12 @@ small,
     rgba(5, 19, 34, .96)
   );
 }
-
 .hero-art img {
   position: absolute;
   inset: 0;
   z-index: -2;
   object-position: 46% center;
 }
-
 .hero-caption {
   position: absolute;
   inset: auto 1rem 1rem;
@@ -361,7 +301,6 @@ small,
   gap: .8rem;
   align-items: center;
 }
-
 .hero-caption .art-icon {
   width: 2.85rem;
   height: 2.85rem;
@@ -372,25 +311,20 @@ small,
   background: var(--accent);
   color: var(--deep);
 }
-
 .hero-caption span {
   display: block;
 }
-
 .hero-caption .caption-meta {
   margin-top: .23rem;
   font-size: .85em;
   color: #E1EAF2;
 }
-
 /* Colecciones */
-
 .collection {
   margin-block: .6rem 3rem;
   padding-top: 1.9rem;
   border-top: 1px solid var(--line);
 }
-
 .section-heading {
   display: flex;
   justify-content: space-between;
@@ -399,16 +333,13 @@ small,
   margin-bottom: 1.2rem;
   flex-wrap: wrap;
 }
-
 .section-heading p {
   margin-top: .3rem;
 }
-
 .cards {
   display: grid;
   gap: .85rem;
 }
-
 .card {
   border: 1px solid var(--line);
   border-radius: .88rem;
@@ -416,28 +347,23 @@ small,
   background: var(--panel);
   transition: border-color .2s ease, transform .2s ease;
 }
-
 .card:hover,
 .card.current {
   border-color: var(--accent);
 }
-
 .card:hover {
   transform: translateY(-3px);
 }
-
 .card-link {
   display: block;
   height: 100%;
   outline-offset: -4px;
 }
-
 .card-art {
   display: block;
   aspect-ratio: 1.9;
   background: #17334F;
 }
-
 .card-body {
   padding: .9rem 1rem 1rem;
   display: flex;
@@ -445,23 +371,19 @@ small,
   justify-content: space-between;
   gap: .55rem;
 }
-
 .card-title,
 .card-meta {
   display: block;
 }
-
 .card-title {
   font-size: 1.04em;
   font-weight: 700;
 }
-
 .card-meta {
   color: var(--muted);
   margin-top: .3rem;
   font-size: .87em;
 }
-
 .card-play {
   color: var(--accent);
   border: 1px solid var(--line);
@@ -472,9 +394,7 @@ small,
   display: grid;
   place-items: center;
 }
-
 /* Pie de página */
-
 .footer {
   border-top: 1px solid var(--line);
   display: flex;
@@ -485,26 +405,20 @@ small,
   padding-block: 1.15rem max(1.15rem, env(safe-area-inset-bottom));
   font-size: .9em;
 }
-
 /* Páginas interiores */
-
 .page {
   padding-block: 1.25rem 3rem;
 }
-
 .page-heading {
   margin-block: 1rem 1.55rem;
 }
-
 .page-heading h1 {
   font-size: clamp(2.25em, 6vw, 4.2em);
 }
-
 .page-heading p {
   margin-top: .65rem;
   max-width: 62ch;
 }
-
 .breadcrumbs {
   color: var(--muted);
   min-height: 3rem;
@@ -512,13 +426,10 @@ small,
   align-items: center;
   gap: .5rem;
 }
-
 .breadcrumbs:hover {
   color: var(--accent);
 }
-
 /* Paneles y catálogo */
-
 .catalog-focus,
 .panel {
   background: var(--panel);
@@ -526,16 +437,13 @@ small,
   border-radius: .85rem;
   padding: 1rem;
 }
-
 .catalog-focus {
   margin-block: 0 1.2rem;
   touch-action: none;
 }
-
 .catalog-focus p {
   margin-top: .42rem;
 }
-
 .catalog-controls,
 .row {
   display: flex;
@@ -543,23 +451,18 @@ small,
   align-items: center;
   gap: .55rem;
 }
-
 .catalog-controls {
   margin-top: .85rem;
 }
-
 .catalog-controls > * {
   flex: 1 1 auto;
 }
-
 /* Exploración de obras */
-
 .work-grid {
   display: grid;
   gap: 1rem;
   align-items: start;
 }
-
 .canvas {
   isolation: isolate;
   background: #17334F;
@@ -572,7 +475,6 @@ small,
   -webkit-touch-callout: none;
   user-select: none;
 }
-
 .canvas img {
   position: absolute;
   inset: 0;
@@ -580,97 +482,78 @@ small,
   z-index: -2;
   pointer-events: none;
 }
-
 .canvas-zone {
   position: absolute;
   border: 1px dashed #F4F1E8;
   background: rgba(212, 167, 44, .12);
   pointer-events: none;
 }
-
 .canvas-zone.active {
   background: rgba(212, 167, 44, .35);
   border: 2px solid var(--accent);
   box-shadow: inset 0 0 0 2px var(--deep);
 }
-
 .zone-list {
   display: grid;
   gap: .55rem;
   margin-top: .8rem;
 }
-
 .zone-list button {
   width: 100%;
   display: flex;
   justify-content: space-between;
   text-align: left;
 }
-
 .zone-list button[aria-pressed="true"] {
   border-color: var(--accent);
   color: var(--accent);
 }
-
 .guidance {
   margin-block: .6rem 1rem;
 }
-
 .now {
   margin-block: .85rem;
   min-height: 3.5rem;
   color: var(--accent);
 }
-
 .work-actions {
   margin-bottom: .9rem;
 }
-
 /* Transcripciones */
-
 details {
   border-top: 1px solid var(--line);
   margin-top: 1rem;
 }
-
 summary {
   cursor: pointer;
   min-height: 3rem;
   padding-block: .75rem;
   font-weight: 700;
 }
-
 .transcript p {
   margin-block: .35rem .9rem;
 }
-
 .transcript a {
   color: #E8BD52;
   text-decoration: underline;
 }
-
 /* Formularios */
-
 .stack {
   display: grid;
   gap: .95rem;
   max-width: 45rem;
 }
-
 .stack h2 {
   font-size: 1.65em;
 }
-
 .field {
   display: grid;
   gap: .45rem;
 }
-
 .field > span,
 legend {
   font-weight: 700;
 }
-
 input:not([type="range"], [type="checkbox"]),
 select,
 textarea {
@@ -682,24 +565,20 @@ textarea {
   background: #081827;
   color: var(--ink);
 }
-
 input::placeholder,
 textarea::placeholder {
   color: #AAB8C7;
 }
-
 input[type="range"] {
   width: 100%;
   min-height: 2.75rem;
   accent-color: var(--accent);
 }
-
 input[type="checkbox"] {
   width: 1.35rem;
   height: 1.35rem;
   accent-color: var(--accent);
 }
-
 .check {
   min-height: 3rem;
   display: flex;
@@ -707,21 +586,17 @@ input[type="checkbox"] {
   align-items: center;
   cursor: pointer;
 }
-
 .field-grid {
   display: grid;
   gap: .7rem;
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
-
 .provider-status {
   min-height: 1.6rem;
 }
-
 .results {
   margin-top: 1.25rem;
 }
-
 .draft-zone {
   border: 1px solid var(--line);
   padding: .8rem;
@@ -730,13 +605,10 @@ input[type="checkbox"] {
   gap: .6rem;
   margin: 0;
 }
-
 [hidden] {
   display: none !important;
 }
-
 /* Botones */
-
 .button {
   min-height: 3.1rem;
   padding: .69rem 1rem;
@@ -753,215 +625,86 @@ input[type="checkbox"] {
   line-height: 1.25;
   transition: background .2s ease, border-color .2s ease, transform .2s ease;
 }
-
 .button:hover {
   border-color: var(--accent);
 }
-
 .button:active {
   transform: scale(.98);
 }
-
 .primary {
   background: var(--accent);
   border-color: var(--accent);
   color: #09203A;
 }
-
 .primary:hover {
   background: #E8BD52;
   border-color: #E8BD52;
 }
-
 .plain {
   background: transparent;
   border-color: transparent;
 }
-
 input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
 }
-
-/* =========================================
-   NUEVA PORTADA MINIMALISTA
-   ========================================= */
-
-body.home-screen {
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  overflow-x: hidden;
-  background:
-    radial-gradient(
-      ellipse at 50% 38%,
-      rgba(27, 67, 105, .42),
-      transparent 58%
-    ),
-    var(--bg);
-}
-
-body.home-screen .top,
-body.home-screen .footer {
-  display: none;
-}
-
-body.home-screen main {
-  width: min(100% - 2rem, 75rem);
-  min-height: 100svh;
-  flex: 1;
-  display: grid;
-  place-items: center;
-  padding-block: 2rem;
-}
-
-.welcome-screen {
-  width: 100%;
-  min-height: min(760px, 88svh);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  gap: clamp(2.5rem, 9vh, 5.5rem);
-  text-align: center;
-  padding: 2rem 1rem;
-}
-
-.welcome-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.35rem;
-}
-
-.welcome-mark {
-  width: clamp(6.5rem, 19vw, 10.5rem);
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  border-radius: 2.2rem;
-  color: #09203A;
-  background: linear-gradient(145deg, #E8BD52, #C79520);
-  box-shadow: 0 1.2rem 3.5rem rgba(0, 0, 0, .28);
-}
-
-.welcome-mark .icon {
-  width: 52%;
-  height: 52%;
-  stroke-width: 1.45;
-}
-
-.welcome-brand h1 {
-  color: var(--ink);
-  font-family: Arial, "Helvetica Neue", sans-serif;
-  font-size: clamp(2.1rem, 6vw, 3.7rem);
-  font-weight: 750;
-  letter-spacing: -.055em;
-  line-height: 1;
-}
-
-.home-cta {
-  width: min(100%, 23rem);
-  min-height: 4.4rem;
-  padding: 1rem 1.6rem;
-  justify-content: center;
-  gap: .85rem;
-  border-radius: 1rem;
-  font-size: clamp(1.05rem, 2.3vw, 1.25rem);
-  font-weight: 800;
-  box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .22);
-}
-
-.home-cta .icon {
-  width: 1.45rem;
-  height: 1.45rem;
-}
-
 /* Diseño adaptable */
-
 @media (max-width: 42rem) {
   .top-inner {
     padding-block: .38rem;
   }
-
   .top nav {
     width: 100%;
     border-top: 1px solid var(--line);
     padding-top: .25rem;
   }
-
   .top nav a {
     flex: 1 1 auto;
     justify-content: center;
     padding-inline: .36rem;
   }
-
   .hero-art {
     min-height: 0;
     width: 100%;
     aspect-ratio: 1.4;
   }
-
   .hero-actions > a.button {
     flex: 1 0 100%;
     max-width: none;
     justify-content: flex-start;
   }
-
-  body.home-screen main {
-    width: 100%;
-    padding-inline: 1rem;
-  }
-
-  .welcome-screen {
-    min-height: 100svh;
-    gap: 3.5rem;
-  }
-
-  .welcome-mark {
-    border-radius: 1.65rem;
-  }
 }
-
 @media (min-width: 40rem) {
   .cards {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
-
   .panel,
   .catalog-focus {
     padding: 1.2rem;
   }
 }
-
 @media (min-width: 53rem) {
   .shell {
     width: min(100% - 5rem, 75rem);
   }
-
   .hero {
     grid-template-columns: minmax(0, .96fr) minmax(0, 1.04fr);
     gap: 2.9rem;
     padding-block: 3.2rem 2.65rem;
   }
-
   .hero-art {
     aspect-ratio: 1.44;
   }
-
   .hero-caption {
     inset: auto 1.3rem 1.25rem;
   }
-
   .work-grid {
     grid-template-columns: 1.35fr 1fr;
     gap: 1.25rem;
   }
 }
-
 /* Movimiento reducido */
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -976,14 +719,12 @@ body.home-screen main {
 /* =========================================
    PORTADA MINIMALISTA — ARTE AL OÍDO
    ========================================= */
-
 body.home-screen {
   min-height: 100vh;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
-
   background:
     radial-gradient(
       ellipse at 50% 38%,
@@ -992,13 +733,11 @@ body.home-screen {
     ),
     var(--bg);
 }
-
 /* Ocultar navegación y pie únicamente en el inicio */
 body.home-screen .top,
 body.home-screen .footer {
   display: none;
 }
-
 /* Área principal */
 body.home-screen main.home-main {
   width: 100%;
@@ -1006,119 +745,487 @@ body.home-screen main.home-main {
   min-height: 100vh;
   min-height: 100svh;
   flex: 1;
-
   display: grid;
   place-items: center;
-
   padding: clamp(1.25rem, 4vw, 3rem);
 }
-
 /* Contenedor central */
 body.home-screen .welcome-screen {
   width: 100%;
   max-width: 42rem;
-
   min-height: calc(
     100svh - 2 * clamp(1.25rem, 4vw, 3rem)
   );
-
   margin-inline: auto;
-
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-
   gap: clamp(3rem, 10vh, 6.5rem);
-
   text-align: center;
   padding: 2rem 1rem;
 }
-
 /* Logotipo y título */
 body.home-screen .welcome-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-
   gap: clamp(1.25rem, 3vh, 2rem);
 }
-
 /* Símbolo */
 body.home-screen .welcome-mark {
   width: clamp(8rem, 20vw, 11rem);
   aspect-ratio: 1;
-
   display: grid;
   place-items: center;
-
   border-radius: 2rem;
-
   color: #09203A;
-
   background: linear-gradient(
     145deg,
     #E8BD52,
     #C79520
   );
-
   box-shadow: 0 1.2rem 3.5rem rgba(0, 0, 0, .28);
-
   font-family: Georgia, "Times New Roman", serif;
   font-size: clamp(5rem, 12vw, 7rem);
   line-height: 1;
 }
-
 /* Nombre de la galería */
 body.home-screen .welcome-brand h1 {
   color: var(--ink);
-
   font-family: Arial, "Helvetica Neue", sans-serif;
   font-size: clamp(2.35rem, 6vw, 4rem);
-
   font-weight: 750;
   letter-spacing: -.055em;
   line-height: 1;
 }
-
 /* Único botón de la portada */
 body.home-screen .home-cta {
   width: min(100%, 27rem);
   min-height: 5.25rem;
-
   padding: 1rem 1.6rem;
-
   display: inline-flex;
   justify-content: center;
   align-items: center;
   gap: .85rem;
-
   border-radius: 1.15rem;
-
   font-size: clamp(1.15rem, 2.5vw, 1.4rem);
   font-weight: 800;
-
   box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .22);
 }
-
 body.home-screen .home-cta span {
   font-size: 1.5em;
   line-height: 1;
 }
-
 /* Adaptación para celulares */
 @media (max-width: 36rem) {
-
   body.home-screen .welcome-screen {
     gap: 3.75rem;
   }
-
   body.home-screen .welcome-mark {
     width: 8rem;
     border-radius: 1.7rem;
   }
-
   body.home-screen .home-cta {
     min-height: 5rem;
   }
+}
+/* =========================================
+   REDISEÑO MINIMALISTA — ARTE AL OÍDO
+   Páginas interiores
+   ========================================= */
+body:not(.home-screen) {
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgba(27, 67, 105, .22),
+      transparent 42%
+    ),
+    var(--bg);
+}
+/* Navegación */
+body:not(.home-screen) .top {
+  position: relative;
+  background: rgba(7, 21, 34, .94);
+  border-bottom-color: rgba(212, 167, 44, .22);
+}
+body:not(.home-screen) .top-inner {
+  min-height: 4.7rem;
+}
+body:not(.home-screen) .brand {
+  letter-spacing: -.045em;
+}
+body:not(.home-screen) .top nav a {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding-inline: .95rem;
+}
+body:not(.home-screen) .top nav a:hover,
+body:not(.home-screen) .top nav a[aria-current] {
+  background: rgba(212, 167, 44, .09);
+  border-color: rgba(212, 167, 44, .28);
+  color: var(--accent);
+}
+/* Estructura general */
+body:not(.home-screen) .page {
+  padding-block: clamp(1.5rem, 4vw, 3rem) 4rem;
+}
+body:not(.home-screen) .breadcrumbs {
+  min-height: 2rem;
+  font-size: .9rem;
+  opacity: .82;
+}
+body:not(.home-screen) .page-heading {
+  margin-block: 1.4rem 2.2rem;
+}
+body:not(.home-screen) .page-heading h1 {
+  font-size: clamp(2.35rem, 5.5vw, 4.4rem);
+  letter-spacing: -.055em;
+}
+body:not(.home-screen) .page-heading p {
+  max-width: 58ch;
+  margin-top: .8rem;
+  font-size: 1.02rem;
+}
+/* Paneles */
+body:not(.home-screen) .panel,
+body:not(.home-screen) .catalog-focus {
+  background: linear-gradient(
+    145deg,
+    rgba(16, 36, 58, .96),
+    rgba(11, 29, 47, .96)
+  );
+  border-color: rgba(192, 203, 215, .16);
+  border-radius: 1rem;
+  box-shadow: 0 1rem 2.8rem rgba(0, 0, 0, .12);
+  padding: clamp(1rem, 2.5vw, 1.55rem);
+}
+body:not(.home-screen) .catalog-focus {
+  border-color: rgba(212, 167, 44, .34);
+  margin-bottom: 1.6rem;
+}
+body:not(.home-screen) .catalog-focus h2 {
+  font-size: clamp(1.8rem, 4vw, 2.7rem);
+  margin-top: .35rem;
+}
+/* Galería y tarjetas */
+body:not(.home-screen) .cards {
+  gap: 1rem;
+}
+body:not(.home-screen) .card {
+  background: rgba(16, 36, 58, .88);
+  border-color: rgba(192, 203, 215, .14);
+  border-radius: .9rem;
+}
+body:not(.home-screen) .card-art {
+  aspect-ratio: 1.55;
+  background: #0B1D2F;
+}
+body:not(.home-screen) .card-body {
+  padding: 1rem;
+  min-height: 5.3rem;
+}
+body:not(.home-screen) .card-title {
+  line-height: 1.35;
+}
+body:not(.home-screen) .card-play {
+  background: rgba(212, 167, 44, .08);
+  border-color: rgba(212, 167, 44, .3);
+}
+/* Botones */
+body:not(.home-screen) .button {
+  min-height: 3rem;
+  border-radius: 999px;
+  padding-inline: 1.2rem;
+}
+body:not(.home-screen) .button.primary {
+  box-shadow: 0 .45rem 1.2rem rgba(212, 167, 44, .12);
+}
+/* Formularios */
+body:not(.home-screen) .field {
+  gap: .55rem;
+}
+body:not(.home-screen) input:not([type="range"], [type="checkbox"]),
+body:not(.home-screen) select,
+body:not(.home-screen) textarea {
+  background: rgba(5, 19, 32, .72);
+  border-color: rgba(192, 203, 215, .22);
+  border-radius: .7rem;
+  min-height: 3.2rem;
+  padding-inline: .9rem;
+}
+body:not(.home-screen) input:focus,
+body:not(.home-screen) select:focus,
+body:not(.home-screen) textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(212, 167, 44, .1);
+}
+/* Búsqueda */
+body:not(.home-screen) .results {
+  margin-top: 2rem;
+}
+body:not(.home-screen) .results h2 {
+  font-size: clamp(1.6rem, 3vw, 2.2rem);
+}
+/* Detalle de las obras */
+body:not(.home-screen) .work-grid {
+  gap: 1.25rem;
+}
+body:not(.home-screen) .canvas {
+  border-radius: 1rem;
+  border-color: rgba(212, 167, 44, .28);
+  box-shadow: 0 1rem 2.8rem rgba(0, 0, 0, .18);
+}
+body:not(.home-screen) .zone-list button {
+  border-radius: .75rem;
+  background: rgba(5, 19, 32, .42);
+}
+body:not(.home-screen) .zone-list button[aria-pressed="true"] {
+  background: rgba(212, 167, 44, .1);
+}
+body:not(.home-screen) .now {
+  border-left: 2px solid var(--accent);
+  padding: .55rem .8rem;
+  background: rgba(212, 167, 44, .055);
+  border-radius: 0 .6rem .6rem 0;
+}
+/* Cuenta, ajustes y curaduría */
+body:not(.home-screen) .stack {
+  gap: 1.1rem;
+}
+body:not(.home-screen) .stack > .panel + .panel {
+  margin-top: .15rem;
+}
+body:not(.home-screen) .stack h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.8rem;
+  letter-spacing: -.035em;
+}
+body:not(.home-screen) .draft-zone {
+  border-color: rgba(192, 203, 215, .18);
+  border-radius: .8rem;
+  background: rgba(5, 19, 32, .32);
+}
+/* Pie de página */
+body:not(.home-screen) .footer {
+  border-top-color: rgba(212, 167, 44, .18);
+  padding-block: 1.5rem;
+}
+/* Escritorio */
+@media (min-width: 53rem) {
+  body:not(.home-screen) .work-grid {
+    grid-template-columns: minmax(0, 1.35fr) minmax(19rem, .9fr);
+    gap: 1.6rem;
+  }
+  body:not(.home-screen) .page-heading {
+    margin-bottom: 2.5rem;
+  }
+}
+/* Dispositivos móviles */
+@media (max-width: 42rem) {
+  body:not(.home-screen) .top-inner {
+    padding-block: .35rem .55rem;
+  }
+  body:not(.home-screen) .top nav {
+    border-top-color: rgba(212, 167, 44, .16);
+    gap: .2rem;
+  }
+  body:not(.home-screen) .top nav a {
+    font-size: .86rem;
+    padding-inline: .45rem;
+  }
+  body:not(.home-screen) .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/* =========================================
+   GALERÍA
+   ========================================= */
+body[data-page="galeria"] #catalog-focus {
+  display: grid;
+  gap: 1.2rem;
+}
+body[data-page="galeria"] #catalog-cards {
+  display: grid;
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, 240px), 1fr)
+  );
+  gap: 1.2rem;
+}
+body[data-page="galeria"] .card {
+  overflow: hidden;
+  transition: transform .25s ease, border-color .25s ease;
+}
+body[data-page="galeria"] .card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(212, 167, 44, .55);
+}
+body[data-page="galeria"] .catalog-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .7rem;
+}
+body[data-page="galeria"] #summary {
+  color: var(--muted);
+  font-size: .9rem;
+}
+/* =========================================
+   BÚSQUEDA
+   ========================================= */
+body[data-page="buscar"] .page-heading {
+  text-align: center;
+}
+body[data-page="buscar"] .page-heading p {
+  margin-inline: auto;
+}
+body[data-page="buscar"] #search-form {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+}
+body[data-page="buscar"] #query {
+  width: 100%;
+  min-height: 3.8rem;
+  font-size: 1.05rem;
+}
+body[data-page="buscar"] #mic {
+  border-radius: 50%;
+  min-width: 3rem;
+  min-height: 3rem;
+}
+body[data-page="buscar"] #voice-search-status {
+  color: var(--muted);
+  font-size: .9rem;
+}
+body[data-page="buscar"] #results-heading {
+  letter-spacing: -.035em;
+}
+body[data-page="buscar"] #result-count {
+  color: var(--muted);
+  font-size: .9rem;
+}
+/* =========================================
+   DETALLE DE OBRA
+   ========================================= */
+body[data-page="obra"] #work-title {
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  letter-spacing: -.05em;
+}
+body[data-page="obra"] #work-meta {
+  color: var(--muted);
+}
+body[data-page="obra"] #canvas {
+  min-height: 360px;
+  background-color: #071522;
+  border: 1px solid rgba(212, 167, 44, .3);
+}
+body[data-page="obra"] #zone-list {
+  display: grid;
+  gap: .7rem;
+}
+body[data-page="obra"] #zone-list button {
+  padding: 1rem;
+  text-align: left;
+  transition: background .2s ease, border-color .2s ease;
+}
+body[data-page="obra"] #zone-list button:hover {
+  border-color: rgba(212, 167, 44, .55);
+}
+body[data-page="obra"] #now {
+  margin-block: 1rem;
+  line-height: 1.7;
+}
+body[data-page="obra"] #transcript {
+  margin-top: 1.2rem;
+}
+/* =========================================
+   AJUSTES
+   ========================================= */
+body[data-page="ajustes"] .stack > .panel {
+  padding: clamp(1.3rem, 3vw, 2rem);
+}
+body[data-page="ajustes"] .stack > .panel h2 {
+  padding-bottom: .8rem;
+  border-bottom: 1px solid rgba(212, 167, 44, .2);
+}
+body[data-page="ajustes"] input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+body[data-page="ajustes"] input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+body[data-page="ajustes"] #rate-value,
+body[data-page="ajustes"] #volume-value {
+  color: var(--accent);
+  font-weight: 600;
+}
+body[data-page="ajustes"] #test-audio {
+  margin-top: .5rem;
+}
+/* =========================================
+   CUENTA
+   ========================================= */
+body[data-page="cuenta"] .page-heading {
+  text-align: center;
+}
+body[data-page="cuenta"] .page-heading p {
+  margin-inline: auto;
+}
+body[data-page="cuenta"] #account-form,
+body[data-page="cuenta"] #account-session {
+  width: 100%;
+  max-width: 520px;
+  margin-inline: auto;
+}
+body[data-page="cuenta"] #account-form input {
+  width: 100%;
+}
+body[data-page="cuenta"] #account-form button {
+  width: 100%;
+}
+body[data-page="cuenta"] #account-form-status,
+body[data-page="cuenta"] #account-status {
+  font-size: .9rem;
+  line-height: 1.6;
+}
+body[data-page="cuenta"] #session-email {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+/* =========================================
+   CURADURÍA
+   ========================================= */
+body[data-page="curaduria"] #generate {
+  padding: clamp(1.2rem, 3vw, 2rem);
+}
+body[data-page="curaduria"] #generate input,
+body[data-page="curaduria"] #generate select,
+body[data-page="curaduria"] #generate textarea {
+  width: 100%;
+}
+body[data-page="curaduria"] #generate button {
+  width: fit-content;
+  max-width: 100%;
+}
+body[data-page="curaduria"] #draft-status {
+  color: var(--muted);
+  line-height: 1.6;
+}
+body[data-page="curaduria"] #drafts {
+  display: grid;
+  gap: 1rem;
+}
+body[data-page="curaduria"] #drafts > * {
+  border: 1px solid rgba(192, 203, 215, .16);
+  border-radius: .8rem;
+  padding: 1rem;
+  background: rgba(5, 19, 32, .35);
+}
+body[data-page="curaduria"] #review {
+  margin-top: 1rem;
 }
