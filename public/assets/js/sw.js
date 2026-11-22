@@ -1,4 +1,4 @@
-const version = 'arte-al-oido-1.0.2';
+const version = 'arte-al-oido-1.0.3';
 const shell = [
   '/', '/galeria/', '/buscar/', '/ajustes/', '/obra/', '/cuenta/', '/curaduria/',
   '/assets/css/styles.css', '/assets/js/app.js', '/assets/js/works.js', '/assets/js/player.js',
@@ -52,7 +52,20 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(version);
     if (request.mode === 'navigate') {
-      try { return await fetch(request); } catch { return cache.match(url.pathname) || cache.match('/'); }
+      try { return await fetch(request); } catch { return cache.match('/'); }
+    }
+    if (url.pathname === '/works.js') {
+      try {
+        const response = await fetch(request);
+        if (response.ok && response.status === 200) {
+          await cache.put(url.pathname, response.clone());
+        }
+        return response;
+      } catch (error) {
+        const cached = await cache.match(url.pathname);
+        if (cached) return cached;
+        throw error;
+      }
     }
     const cached = await cache.match(url.pathname);
     const range = request.headers.get('range');

@@ -82,19 +82,9 @@ function renderCards(root, list, active) {
 }
 
 function fillHome() {
-  const work = catalog[0];
-  if (!work) return;
-  document.querySelector('#featured-image').src = work.image;
-  document.querySelector('#featured-title').textContent = work.title;
-  document.querySelector('#featured-meta').textContent = `${work.artist} · ${work.technique}`;
-  renderCards(document.querySelector('#home-cards'), catalog.slice(0, 3));
-  document.querySelector('#welcome').onclick = () => {
-    if (audioStatus('bienvenida') === 'playing') return pauseVoice('bienvenida');
-    playVoice('bienvenida', welcome, '/media/bienvenida.wav', state => {
-      document.querySelector('#welcome').textContent = state === 'playing' ? 'Pausar bienvenida' : 'Escuchar bienvenida';
-      if (state === 'unavailable') announce(welcome);
-    });
-  };
+  // Portada minimalista.
+  // La única acción visible es acceder a la galería.
+  // Se conserva el resto de la aplicación sin modificaciones.
 }
 
 function fillGallery() {
