@@ -972,3 +972,153 @@ body.home-screen main {
     transition-duration: .01ms !important;
   }
 }
+
+/* =========================================
+   PORTADA MINIMALISTA — ARTE AL OÍDO
+   ========================================= */
+
+body.home-screen {
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+
+  background:
+    radial-gradient(
+      ellipse at 50% 38%,
+      rgba(27, 67, 105, .42),
+      transparent 58%
+    ),
+    var(--bg);
+}
+
+/* Ocultar navegación y pie únicamente en el inicio */
+body.home-screen .top,
+body.home-screen .footer {
+  display: none;
+}
+
+/* Área principal */
+body.home-screen main.home-main {
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  min-height: 100svh;
+  flex: 1;
+
+  display: grid;
+  place-items: center;
+
+  padding: clamp(1.25rem, 4vw, 3rem);
+}
+
+/* Contenedor central */
+body.home-screen .welcome-screen {
+  width: 100%;
+  max-width: 42rem;
+
+  min-height: calc(
+    100svh - 2 * clamp(1.25rem, 4vw, 3rem)
+  );
+
+  margin-inline: auto;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
+  gap: clamp(3rem, 10vh, 6.5rem);
+
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+/* Logotipo y título */
+body.home-screen .welcome-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: clamp(1.25rem, 3vh, 2rem);
+}
+
+/* Símbolo */
+body.home-screen .welcome-mark {
+  width: clamp(8rem, 20vw, 11rem);
+  aspect-ratio: 1;
+
+  display: grid;
+  place-items: center;
+
+  border-radius: 2rem;
+
+  color: #09203A;
+
+  background: linear-gradient(
+    145deg,
+    #E8BD52,
+    #C79520
+  );
+
+  box-shadow: 0 1.2rem 3.5rem rgba(0, 0, 0, .28);
+
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(5rem, 12vw, 7rem);
+  line-height: 1;
+}
+
+/* Nombre de la galería */
+body.home-screen .welcome-brand h1 {
+  color: var(--ink);
+
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  font-size: clamp(2.35rem, 6vw, 4rem);
+
+  font-weight: 750;
+  letter-spacing: -.055em;
+  line-height: 1;
+}
+
+/* Único botón de la portada */
+body.home-screen .home-cta {
+  width: min(100%, 27rem);
+  min-height: 5.25rem;
+
+  padding: 1rem 1.6rem;
+
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: .85rem;
+
+  border-radius: 1.15rem;
+
+  font-size: clamp(1.15rem, 2.5vw, 1.4rem);
+  font-weight: 800;
+
+  box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .22);
+}
+
+body.home-screen .home-cta span {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+/* Adaptación para celulares */
+@media (max-width: 36rem) {
+
+  body.home-screen .welcome-screen {
+    gap: 3.75rem;
+  }
+
+  body.home-screen .welcome-mark {
+    width: 8rem;
+    border-radius: 1.7rem;
+  }
+
+  body.home-screen .home-cta {
+    min-height: 5rem;
+  }
+}
