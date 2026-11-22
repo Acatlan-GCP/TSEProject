@@ -1,34 +1,70 @@
+
 <!doctype html>
 <html lang="es-MX">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111513">
-  <meta name="description" content="Galería táctil y sonora en español. Escucha y explora obras de arte por zonas.">
+  <meta name="theme-color" content="#171512">
+  <meta name="description" content="Arte al oído: una galería accesible para explorar obras mediante narración, tacto y sonido.">
+
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/media/icon-192.png">
   <link rel="apple-touch-icon" href="/media/icon-192.png">
   <link rel="stylesheet" href="/styles.css">
+
   <title>Arte al oído</title>
 </head>
+
 <body>
-  <a class="skip" href="#contenido">Saltar al contenido</a>
+  <a class="skip" href="#contenido">
+    Saltar al contenido
+  </a>
+
   <header class="top">
     <div class="shell top-inner">
-      <a class="brand" href="#inicio" aria-label="Arte al oído, inicio"><span class="brand-mark" data-icon="wave"></span>Arte<span class="brand-accent"> al oído</span></a>
+      <a class="brand" href="#inicio" aria-label="Arte al oído, inicio">
+        <span class="brand-mark" data-icon="wave"></span>
+        Arte<span class="brand-accent"> al oído</span>
+      </a>
+
       <nav aria-label="Navegación principal">
-        <a href="#galeria" data-nav="galeria"><span data-icon="grid"></span>Galería</a>
-        <a href="#buscar" data-nav="buscar"><span data-icon="mic"></span>Buscar</a>
-        <a href="#ajustes" data-nav="ajustes"><span data-icon="settings"></span>Ajustes</a>
+        <a href="#galeria" data-nav="galeria">
+          <span data-icon="grid"></span>
+          Galería
+        </a>
+
+        <a href="#buscar" data-nav="buscar">
+          <span data-icon="mic"></span>
+          Buscar
+        </a>
+
+        <a href="#ajustes" data-nav="ajustes">
+          <span data-icon="settings"></span>
+          Ajustes
+        </a>
       </nav>
     </div>
   </header>
+
   <main id="contenido" class="shell" tabindex="-1"></main>
-  <footer class="shell footer"><span>Arte al oído</span><span>Galería táctil y sonora</span></footer>
-  <div id="route-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <footer class="shell footer">
+    <span>Arte al oído</span>
+    <span>El arte también se escucha.</span>
+  </footer>
+
+  <div
+    id="route-status"
+    class="sr-only"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true">
+  </div>
+
   <audio id="voice" preload="auto" playsinline></audio>
   <audio id="ambience" preload="none" playsinline loop></audio>
   <audio id="effect" preload="none" playsinline></audio>
+
   <script type="module" src="/app.js"></script>
 </body>
 </html>
