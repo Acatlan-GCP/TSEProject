@@ -7,6 +7,9 @@ import { api } from './backend.mjs';
 import { HttpError } from './model.mjs';
 import { cloudEnabled, PROJECT_ID, BUCKET_NAME, REGION } from './gcp.mjs';
 
+const isDev = process.env.NODE_ENV !== 'production';
+const githubUrls = isDev ? " https://github.dev https://*.app.github.dev" : "";
+
 const root = fileURLToPath(new URL('./public/', import.meta.url));
 const staticTypes = {
   '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
@@ -14,9 +17,10 @@ const staticTypes = {
   '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.jpg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp'
 };
 const security = {
-  'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin',
+  'x-content-type-options': 'nosniff', 
+  'referrer-policy': 'strict-origin-when-cross-origin',
   'permissions-policy': 'microphone=(self), camera=(), geolocation=()',
-  'content-security-policy': "default-src 'self'; img-src 'self' https://storage.googleapis.com; media-src 'self' https://storage.googleapis.com; connect-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+  'content-security-policy': `default-src 'self'${githubUrls}; img-src 'self' data: https://storage.googleapis.com${githubUrls}; media-src 'self' https://storage.googleapis.com; connect-src 'self' https://github.dev https://*.app.github.dev; style-src 'self' 'unsafe-inline'${githubUrls}; script-src 'self' 'unsafe-inline'${githubUrls}; manifest-src 'self' https://github.dev https://*.app.github.dev; object-src 'none'; base-uri 'none'; frame-ancestors 'self'${githubUrls}; form-action 'self'`
 };
 
 export function parseRange(range, size) {

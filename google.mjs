@@ -4,7 +4,7 @@ import { HttpError } from './model.mjs';
 import { 
   PROJECT_ID, BUCKET_NAME, REGION, FIREBASE_WEB_API_KEY, GALLERY_SIGNER, 
   CURATOR_UIDS, ALLOW_REGISTRATION, FIRESTORE_DATABASE, GEMINI_MODEL, 
-  VERTEX_LOCATION, TTS_VOICE, cloudEnabled 
+  VERTEX_LOCATION, TTS_VOICE, cloudEnabled, ELEVENLABS_API_KEY, ELEVENLABS_VOICE_ID
 } from './gcp.mjs';
 
 const hash = data => createHash('sha256').update(data).digest('hex');
@@ -22,13 +22,10 @@ let certificates;
 let certificateExpiry = 0;
 
 async function credential() {
-  // 1. Token forzado por variable
   if (process.env.GOOGLE_OAUTH_ACCESS_TOKEN) return process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
-  
-  // 2. Caché válido
   if (credentials && credentials.expires > Date.now()) return credentials.value;
   
-  // 3. Metadata server (Cloud Run)
+  // 1. Intentar obtener del servidor de metadatos (Cloud Run)
   try {
     const response = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
       headers: { 'Metadata-Flavor': 'Google' }, 
@@ -41,32 +38,28 @@ async function credential() {
     }
   } catch (e) { /* No estamos en GCP */ }
 
-  // 4. Archivo JSON de credenciales (desarrollo local)
+  // 2. FALLBACK LOCAL: Usar archivo JSON de credenciales
   const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
   if (credPath) {
     try {
-      const { readFile } = await import('node:fs/promises');
-      const credFile = JSON.parse(await readFile(credPath, 'utf8'));
-      
-      // Usar el token del archivo (si es tipo "authorized_user" o "service_account")
-      // Para service_account necesitamos hacer un JWT, pero para testing rápido
-      // usamos google-auth-library si está disponible
       const { GoogleAuth } = await import('google-auth-library');
       const auth = new GoogleAuth({
-        keyFile: credPath,
+        keyFile: credPath, // <-- CAMBIO CLAVE: 'keyFile' en lugar de 'keyFilename'
         scopes: ['https://www.googleapis.com/auth/cloud-platform']
       });
       const client = await auth.getClient();
-      const token = await client.getAccessToken();
-      credentials = { value: token.token, expires: Date.now() + 3500 * 1000 };
-      return token.token;
+      const tokenResponse = await client.getAccessToken();
+      credentials = { value: tokenResponse.token, expires: Date.now() + 3500 * 1000 };
+      return tokenResponse.token;
     } catch (err) {
       throw new Error(`Error con credenciales JSON: ${err.message}. Instala: npm install google-auth-library`);
     }
   }
 
-  throw new Error('No hay credenciales disponibles. Configura GOOGLE_APPLICATION_CREDENTIALS o instala gcloud.');
+  throw new Error('No hay credenciales disponibles. Configura GOOGLE_APPLICATION_CREDENTIALS o ejecuta en un entorno con gcloud instalado.');
 }
+
+
 
 export class GoogleError extends Error {
   constructor(status, service, reason) {
@@ -128,7 +121,14 @@ export async function listDocs(collection) {
     const query = new URLSearchParams({ pageSize: '100' });
     if (nextPage) query.set('pageToken', nextPage);
     const result = await call('Firestore', `${endpoint}/${collection}?${query}`);
-    documents.push(...(result.documents ?? []).map(record => decodeDocument(record).data));
+    
+    documents.push(...(result.documents ?? []).map(record => {
+      const decoded = decodeDocument(record);
+      // Extraer el ID del nombre completo del documento (ej: ".../documents/works/123-abc" -> "123-abc")
+      const id = record.name.split('/').pop();
+      return { id, ...decoded.data }; // <-- AQUÍ AGREGAMOS EL ID
+    }));
+    
     nextPage = result.nextPageToken;
   } while (nextPage);
   return documents;
@@ -246,7 +246,14 @@ export async function signIn(email, password, register) {
       method: 'POST', auth: false, body: { email, password, returnSecureToken: true }
     });
     const user = await verifyToken(result.idToken);
-    return { token: result.idToken, user: { email: user.email, curator: user.curator } };
+    return { 
+      token: result.idToken, 
+      user: { 
+        uid: user.uid,
+        email: user.email, 
+        curator: user.curator 
+      } 
+    };
   } catch (error) {
     if (!(error instanceof GoogleError)) throw error;
     if (error.status === 400 || error.status === 429) {
@@ -284,4 +291,38 @@ export async function verifyToken(token) {
   const cert = Object.hasOwn(certificates, header.kid) && certificates[header.kid];
   if (!cert || !verify('RSA-SHA256', Buffer.from(`${parts[0]}.${parts[1]}`), cert, signature)) throw fail();
   return { uid: claims.sub, email: claims.email, curator: curatorIds.has(claims.sub) || claims.curator === true };
+}
+
+export async function synthesizeElevenLabs(text) {
+  if (!ELEVENLABS_API_KEY || !ELEVENLABS_VOICE_ID) {
+    throw new Error('Faltan credenciales de ElevenLabs en las variables de entorno.');
+  }
+
+  const url = `https://api.elevenlabs.io/v1/text-to-speech/${ELEVENLABS_VOICE_ID}`;
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Accept': 'audio/mpeg',
+      'Content-Type': 'application/json',
+      'xi-api-key': ELEVENLABS_API_KEY
+    },
+    body: JSON.stringify({
+      text: text,
+      model_id: "eleven_monolingual_v1", // Modelo optimizado para español/inglés, rápido y barato
+      voice_settings: {
+        stability: 0.5,
+        similarity_boost: 0.75
+      }
+    })
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new HttpError(502, `ElevenLabs falló: ${response.status} - ${errorText}`);
+  }
+
+  // ElevenLabs devuelve el audio directamente como un ArrayBuffer
+  const arrayBuffer = await response.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 }

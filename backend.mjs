@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, commitPublication,
-  saveObject, removeObject, signedObject, describeImage, synthesize
+  saveObject, removeObject, signedObject, describeImage, synthesize, synthesizeElevenLabs
 } from './google.mjs';
 import { cloudEnabled, BUCKET_NAME } from './gcp.mjs';
 import { HttpError, artworkFields, normalizeNarration, normalizePreferences, text, verifyImage } from './model.mjs';
@@ -233,6 +233,237 @@ if (path === '/api/subir' && method === 'POST') {
     ruta: path,
     url: `https://storage.googleapis.com/${BUCKET_NAME}/${path}`
   });
+}
+
+if (path === '/api/admin/register' && method === 'POST') {
+    const { email, password, realName, username } = await readBody(request, 4000);
+    
+    // Validar campos
+    const cleanEmail = text(email, 254, 'correo');
+    const cleanPassword = text(password, 1200, 'contraseña');
+    const cleanRealName = text(realName, 100, 'nombre real');
+    const cleanUsername = text(username, 30, 'nombre de usuario').toLowerCase();
+
+    if (cleanPassword.length < 6) throw new HttpError(400, 'La contraseña debe tener al menos 6 caracteres.');
+
+    // 1. Verificar que el username no exista (Colección 'usernames')
+    const existingUsername = await readDoc('usernames', cleanUsername);
+    if (existingUsername) {
+      throw new HttpError(409, 'El nombre de usuario ya está en uso.');
+    }
+
+    // 2. Crear usuario en Firebase Auth
+    const authResult = await signIn(cleanEmail, cleanPassword, true);
+    const uid = authResult.user.uid;
+
+    // 3. Guardar perfil en Firestore (Colección 'users')
+    await writeDoc('users', uid, {
+      realName: cleanRealName,
+      username: cleanUsername,
+      email: cleanEmail,
+      role: 'creador', // Rol por defecto
+      createdAt: new Date().toISOString()
+    });
+
+    // 4. Reservar el username (Colección 'usernames')
+    await writeDoc('usernames', cleanUsername, { uid });
+
+    return okay({ 
+      message: 'Usuario creado exitosamente', 
+      token: authResult.token,
+      user: { uid, username: cleanUsername, role: 'creador' }
+    });
+  }
+
+  // LOGIN DE USUARIO
+  if (path === '/api/admin/login' && method === 'POST') {
+    const { email, password } = await readBody(request, 4000);
+    const cleanEmail = text(email, 254, 'correo');
+    const cleanPassword = text(password, 1200, 'contraseña');
+
+    const authResult = await signIn(cleanEmail, cleanPassword, false);
+    const uid = authResult.user.uid;
+
+    // Leer perfil completo desde Firestore
+    const userProfile = await readDoc('users', uid);
+    if (!userProfile) {
+      throw new HttpError(500, 'Error al recuperar el perfil del usuario.');
+    }
+
+    return okay({ 
+      message: 'Inicio de sesión exitoso',
+      token: authResult.token,
+      user: { uid, ...userProfile.data }
+    });
+  }
+
+  // OBTENER PERFIL DEL USUARIO LOGUEADO
+  if (path === '/api/admin/me' && method === 'GET') {
+    const user = await readUser(request); // Usa tu función existente que valida el token
+    const userProfile = await readDoc('users', user.uid);
+    return okay({ user: userProfile.data });
+  }
+
+  // ==========================================
+  // 🎨 ADMIN: GESTIÓN DE OBRAS (CRUD)
+  // ==========================================
+
+  // LISTAR OBRAS (Admin ve todas, Creador ve solo las suyas)
+  if (path === '/api/admin/works' && method === 'GET') {
+    const user = await readUser(request);
+    const allWorks = await listDocs('works');
+    
+    if (user.role === 'administrador') {
+      return okay({ works: allWorks });
+    }
+    
+    // Filtrar solo las obras del creador
+    const userWorks = allWorks.filter(work => work.creatorId === user.uid);
+    return okay({ works: userWorks });
+  }
+
+  // CREAR NUEVA OBRA (Borrador)
+  if (path === '/api/admin/works' && method === 'POST') {
+    const user = await readUser(request);
+    const body = await readBody(request, 10_000_000); // Límite alto para incluir zonas y metadatos
+
+    const workId = randomUUID();
+    const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+    const imagePath = `works/${workId}/art.${extensions[body.imageType] || 'jpg'}`;
+
+    // Guardar imagen en Storage
+    const imageBytes = verifyImage(body.imageType, body.imageData);
+    await saveObject(imagePath, imageBytes, body.imageType);
+
+    // Estructura de la obra
+    const workData = {
+      id: workId,
+      creatorId: user.uid,
+      author: text(body.author, 120, 'autor'),
+      exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
+      uploadDate: new Date().toISOString(),
+      imagePath: imagePath,
+      zones: body.zones || [], // JSON de posiciones
+      aiDescription: '', // Se llenará después con IA
+      narrationAudioPath: '', // Se llenará después con ElevenLabs
+      sceneAudioPath: body.sceneAudioPath || '', // Si ya subió un audio de escena
+      isPublished: false
+    };
+
+    await writeDoc('works', workId, workData);
+    return HTTP(201, { work: workData });
+  }
+  
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'GET') {
+    const user = await readUser(request);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
+    
+    const document = await readDoc('works', workId);
+    if (!document) throw notFound();
+    
+    // Verificar que sea el creador o un administrador
+    if (user.role !== 'administrador' && document.data.creatorId !== user.uid) {
+      throw new HttpError(403, 'No tienes permisos para ver esta obra.');
+    }
+    
+    // Devolver los datos con el ID incluido
+    return okay({ work: { id: workId, ...document.data } });
+  }
+
+  // GENERAR DESCRIPCIÓN CON IA Y AUDIO CON ELEVENLABS
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-narration$/) && method === 'POST') {
+    const user = await readUser(request);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-narration$/)[1];
+    
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    
+    // Validar permisos
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+      throw new HttpError(403, 'No tienes permisos para editar esta obra.');
+    }
+
+    const work = workDoc.data;
+
+    // 1. Llamar a Gemini para obtener descripción y zonas (si no las tiene)
+    let aiDescription = work.aiDescription;
+    let zones = work.zones;
+
+    if (zones.length === 0 || !aiDescription) {
+      try {
+        const aiResult = await describeImage({ title: work.author, artist: 'Desconocido' }, work.imagePath, 'image/jpeg');
+        aiDescription = aiResult.summary || aiResult.intro || 'Descripción no disponible.';
+        zones = aiResult.zones || zones;
+      } catch (error) {
+        throw new HttpError(502, 'Error al generar la descripción con IA.');
+      }
+    }
+
+    // 2. Generar audio con ElevenLabs
+    let narrationAudioPath = work.narrationAudioPath;
+    if (!narrationAudioPath && aiDescription) {
+      try {
+        const audioBytes = await synthesizeElevenLabs(aiDescription);
+        narrationAudioPath = `works/${workId}/audio/narracion.mp3`;
+        await saveObject(narrationAudioPath, audioBytes, 'audio/mpeg');
+      } catch (error) {
+        throw new HttpError(502, 'Error al generar el audio con ElevenLabs.');
+      }
+    }
+
+    // 3. Actualizar Firestore
+    const updatedWork = { ...work, aiDescription, zones, narrationAudioPath };
+    await writeDoc('works', workId, updatedWork);
+
+    return okay({ work: updatedWork });
+  }
+
+  // ACTUALIZAR OBRA (Metadatos o Zonas editadas)
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'PUT') {
+    const user = await readUser(request, true);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
+    
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+      throw new HttpError(403, 'No tienes permisos para editar esta obra.');
+    }
+
+    const body = await readBody(request, 10_000_000);
+    const updatedWork = {
+      ...workDoc.data,
+      author: text(body.author, 120, 'autor'),
+      exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
+      zones: body.zones || workDoc.data.zones,
+      aiDescription: body.aiDescription || workDoc.data.aiDescription,
+      updatedAt: new Date().toISOString()
+    };
+
+    await writeDoc('works', workId, updatedWork);
+    return okay({ work: updatedWork });
+  }
+
+  // ELIMINAR OBRA
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'DELETE') {
+    const user = await readUser(request, true);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
+    
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+      throw new HttpError(403, 'No tienes permisos para eliminar esta obra.');
+    }
+
+    // Eliminar archivos de Storage
+    if (workDoc.data.imagePath) await removeObject(workDoc.data.imagePath).catch(() => {});
+    if (workDoc.data.narrationAudioPath) await removeObject(workDoc.data.narrationAudioPath).catch(() => {});
+
+    // Eliminar de Firestore
+    await call('Firestore', `${endpoint}/works/${encodeURIComponent(workId)}`, { method: 'DELETE' });
+
+    return okay({ message: 'Obra eliminada correctamente' });
 }
   throw notFound();
 }

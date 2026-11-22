@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel de Administración - Arte al oído</title>
+  <link rel="stylesheet" href="./admin.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Panel de Administración</h1>
+
+    <!-- VISTA: AUTENTICACIÓN -->
+    <div id="view-auth" class="view">
+      <div class="auth-tabs">
+        <button class="tab-btn active" data-tab="login">Iniciar sesión</button>
+        <button class="tab-btn" data-tab="register">Registrarse</button>
+      </div>
+
+      <!-- Formulario Login -->
+      <form id="form-login" class="auth-form">
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="login-email" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input type="password" id="login-password" required>
+        </div>
+        <button type="submit" class="btn-primary">Entrar</button>
+        <div id="login-error" class="error-msg" hidden></div>
+      </form>
+
+      <!-- Formulario Registro -->
+      <form id="form-register" class="auth-form" hidden>
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="reg-email" required>
+        </div>
+        <div class="form-group">
+          <label>Contraseña (mín. 6 caracteres)</label>
+          <input type="password" id="reg-password" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label>Nombre real</label>
+          <input type="text" id="reg-realname" required>
+        </div>
+        <div class="form-group">
+          <label>Nombre de usuario (único)</label>
+          <input type="text" id="reg-username" required pattern="[a-zA-Z0-9_]{3,30}" title="Solo letras, números y guiones bajos, 3-30 caracteres">
+        </div>
+        <button type="submit" class="btn-primary">Crear cuenta</button>
+        <div id="reg-error" class="error-msg" hidden></div>
+      </form>
+    </div>
+
+    <!-- VISTA: DASHBOARD -->
+    <div id="view-dashboard" class="view" hidden>
+      <div class="dashboard-header">
+        <p>Bienvenido, <strong id="user-display-name"></strong> (<span id="user-role"></span>)</p>
+        <div>
+          <button id="btn-new-work" class="btn-primary">➕ Nueva obra</button>
+          <button id="btn-logout" class="btn-secondary">Salir</button>
+        </div>
+      </div>
+      <div id="works-list" class="works-grid"></div>
+    </div>
+
+    <!-- VISTA: EDITOR DE OBRA -->
+    <div id="view-editor" class="view" hidden>
+      <button id="btn-back" class="btn-secondary">← Volver</button>
+      <h2 id="editor-title">Nueva obra</h2>
+
+      <form id="form-work" class="editor-form">
+        <div class="form-group">
+          <label>Autor de la obra</label>
+          <input type="text" id="work-author" required>
+        </div>
+        <div class="form-group">
+          <label>Lugar de exposición</label>
+          <input type="text" id="work-exhibition" required>
+        </div>
+        <div class="form-group">
+          <label>Imagen de la obra</label>
+          <input type="file" id="work-image" accept="image/jpeg,image/png,image/webp" required>
+        </div>
+
+        <!-- Zona de edición interactiva -->
+        <div id="image-editor" class="image-editor" hidden>
+          <img id="preview-image" src="" alt="Vista previa">
+          <div id="zones-container"></div>
+        </div>
+
+        <div class="editor-actions">
+          <button type="button" id="btn-generate-ai" class="btn-secondary">🤖 Generar descripción y zonas con IA</button>
+          <button type="button" id="btn-generate-audio" class="btn-secondary">🔊 Generar narración con ElevenLabs</button>
+        </div>
+
+        <div class="form-group">
+          <label>Descripción IA (editable)</label>
+          <textarea id="work-description" rows="4"></textarea>
+        </div>
+
+        <div id="zones-list" class="zones-list"></div>
+
+        <button type="submit" class="btn-primary">💾 Guardar obra</button>
+        <div id="work-error" class="error-msg" hidden></div>
+        <div id="work-success" class="success-msg" hidden></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="./admin.js"></script>
+</body>
+</html>

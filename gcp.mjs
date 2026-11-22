@@ -13,5 +13,8 @@ export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 export const VERTEX_LOCATION = process.env.VERTEX_LOCATION || REGION;
 export const TTS_VOICE = process.env.TTS_VOICE || 'es-US-Neural2-A';
 
+export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
+export const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '';
+
 // cloudEnabled será true solo si tienes Project ID y Bucket
 export const cloudEnabled = Boolean(PROJECT_ID && BUCKET_NAME);
