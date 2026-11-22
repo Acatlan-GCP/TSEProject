@@ -400,130 +400,26 @@ function tutorial() {
    ========================================== */
 
 function home() {
-  const work = catalog[0];
-
   main.innerHTML = `
-    <section class="hero">
-      <div class="hero-copy">
+    <section class="welcome-screen" aria-labelledby="welcome-title">
 
-        <div class="eyebrow">
-          ${icon('headphones')}
-          Galería accesible
-        </div>
+      <div class="welcome-brand">
+        <span class="welcome-mark">
+          ${icon('wave')}
+        </span>
 
-        <h1 tabindex="-1">
-          El arte también
-          <br>
-          se <em>escucha.</em>
-        </h1>
-
-        <p>
-          Explora obras de arte a través del tacto,
-          la narración y el sonido.
-        </p>
-
-        <div class="hero-actions">
-
-          <a class="button primary" href="#galeria">
-            ${icon('grid')}
-            Explorar galería
-          </a>
-
-          <a class="button" href="#buscar">
-            ${icon('mic')}
-            Buscar una obra
-          </a>
-
-          <a class="button" href="#tutorial">
-            ${icon('book')}
-            Conocer cómo funciona
-          </a>
-
-          <a class="button" href="#ajustes">
-            ${icon('settings')}
-            Ajustes de accesibilidad
-          </a>
-
-          ${button(
-            'Escuchar bienvenida',
-            'welcome',
-            'play',
-            'plain welcome'
-          )}
-
-        </div>
+        <h1 id="welcome-title">Arte al oído</h1>
       </div>
 
-      <figure class="hero-art" style="margin:0">
-        ${image(work, 'fetchpriority="high"')}
+      <a class="button primary home-cta" href="#galeria">
+        ${icon('headphones')}
+        Explorar galería
+      </a>
 
-        <figcaption class="hero-caption">
-          <span class="art-icon">
-            ${icon('wave')}
-          </span>
-
-          <span>
-            <strong>${esc(work.title)}</strong>
-
-            <span class="caption-meta">
-              ${esc(work.artist)} · ${esc(work.technique)}
-            </span>
-          </span>
-        </figcaption>
-      </figure>
-    </section>
-
-    <section
-      class="collection"
-      aria-labelledby="collection-title">
-
-      <div class="section-heading">
-        <div>
-          <h2 id="collection-title">
-            Obras para escuchar
-          </h2>
-
-          <p class="muted">
-            Elige una pieza para explorar sus zonas.
-          </p>
-        </div>
-      </div>
-
-      <div class="cards" id="home-cards">
-        ${cards(catalog.slice(0, 3))}
-      </div>
     </section>
   `;
-
-  const control = document.querySelector('#welcome');
-
-  control.onclick = () => {
-    const key = 'bienvenida';
-
-    if (audioStatus(key) === 'playing') {
-      pauseVoice(key);
-      return;
-    }
-
-    playVoice(
-      key,
-      welcome,
-      '/media/bienvenida.wav',
-      state => {
-        control.innerHTML = `
-          ${icon(state === 'playing' ? 'pause' : 'play')}
-          ${state === 'playing'
-            ? 'Pausar bienvenida'
-            : 'Escuchar bienvenida'}
-        `;
-
-        if (state === 'unavailable') {
-          announce(welcome);
-        }
-      }
-    );
-  };
 }
+
 
 /* ==========================================
    FICHA DE CATÁLOGO
@@ -1513,6 +1409,10 @@ function render({
   activeRoute = route;
 
   const [section, identifier] = route.split('/');
+  document.body.classList.toggle(
+  'home-screen',
+  section === 'inicio'
+  );
 
   const work = section === 'obra'
     ? catalog.find(entry =>

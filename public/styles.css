@@ -1,8 +1,7 @@
 
 /* =========================================
    ARTE AL OÍDO
-   Identidad visual inspirada en la UNAM
-   Azul universitario + dorado
+   Identidad visual azul y dorada
    ========================================= */
 
 :root {
@@ -159,14 +158,14 @@ small,
   color: var(--accent);
 }
 
-/* Estructura general */
+/* Estructura */
 
 .shell {
   width: min(100% - 2rem, 75rem);
   margin-inline: auto;
 }
 
-/* Navegación superior */
+/* Navegación */
 
 .top {
   border-bottom: 1px solid var(--line);
@@ -271,7 +270,7 @@ small,
   white-space: nowrap;
 }
 
-/* Portada */
+/* Portada original: estilos conservados */
 
 .hero {
   display: grid;
@@ -384,7 +383,7 @@ small,
   color: #E1EAF2;
 }
 
-/* Colecciones y tarjetas */
+/* Colecciones */
 
 .collection {
   margin-block: .6rem 3rem;
@@ -779,12 +778,104 @@ input[type="checkbox"] {
   border-color: transparent;
 }
 
-/* Ajustes de color en navegación y controles */
-
 input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--accent);
+}
+
+/* =========================================
+   NUEVA PORTADA MINIMALISTA
+   ========================================= */
+
+body.home-screen {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  background:
+    radial-gradient(
+      ellipse at 50% 38%,
+      rgba(27, 67, 105, .42),
+      transparent 58%
+    ),
+    var(--bg);
+}
+
+body.home-screen .top,
+body.home-screen .footer {
+  display: none;
+}
+
+body.home-screen main {
+  width: min(100% - 2rem, 75rem);
+  min-height: 100svh;
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding-block: 2rem;
+}
+
+.welcome-screen {
+  width: 100%;
+  min-height: min(760px, 88svh);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: clamp(2.5rem, 9vh, 5.5rem);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.welcome-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.35rem;
+}
+
+.welcome-mark {
+  width: clamp(6.5rem, 19vw, 10.5rem);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border-radius: 2.2rem;
+  color: #09203A;
+  background: linear-gradient(145deg, #E8BD52, #C79520);
+  box-shadow: 0 1.2rem 3.5rem rgba(0, 0, 0, .28);
+}
+
+.welcome-mark .icon {
+  width: 52%;
+  height: 52%;
+  stroke-width: 1.45;
+}
+
+.welcome-brand h1 {
+  color: var(--ink);
+  font-family: Arial, "Helvetica Neue", sans-serif;
+  font-size: clamp(2.1rem, 6vw, 3.7rem);
+  font-weight: 750;
+  letter-spacing: -.055em;
+  line-height: 1;
+}
+
+.home-cta {
+  width: min(100%, 23rem);
+  min-height: 4.4rem;
+  padding: 1rem 1.6rem;
+  justify-content: center;
+  gap: .85rem;
+  border-radius: 1rem;
+  font-size: clamp(1.05rem, 2.3vw, 1.25rem);
+  font-weight: 800;
+  box-shadow: 0 .8rem 2rem rgba(0, 0, 0, .22);
+}
+
+.home-cta .icon {
+  width: 1.45rem;
+  height: 1.45rem;
 }
 
 /* Diseño adaptable */
@@ -816,6 +907,20 @@ textarea:focus {
     flex: 1 0 100%;
     max-width: none;
     justify-content: flex-start;
+  }
+
+  body.home-screen main {
+    width: 100%;
+    padding-inline: 1rem;
+  }
+
+  .welcome-screen {
+    min-height: 100svh;
+    gap: 3.5rem;
+  }
+
+  .welcome-mark {
+    border-radius: 1.65rem;
   }
 }
 
@@ -855,7 +960,7 @@ textarea:focus {
   }
 }
 
-/* Respeto a la preferencia de movimiento reducido */
+/* Movimiento reducido */
 
 @media (prefers-reduced-motion: reduce) {
   *,
