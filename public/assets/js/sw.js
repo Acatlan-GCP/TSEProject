@@ -52,7 +52,7 @@ self.addEventListener('fetch', event => {
   event.respondWith((async () => {
     const cache = await caches.open(version);
     if (request.mode === 'navigate') {
-      try { return await fetch(request); } catch { return cache.match(url.pathname) || cache.match('/'); }
+      try { return await fetch(request); } catch { return cache.match('/'); }
     }
     if (url.pathname === '/works.js') {
       try {
