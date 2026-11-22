@@ -22,21 +22,37 @@ let certificates;
 let certificateExpiry = 0;
 
 async function credential() {
-  // Si estamos probando localmente con una variable de entorno de token (opcional)
+  // 1. Si hay un token forzado por variable de entorno, úsalo
   if (process.env.GOOGLE_OAUTH_ACCESS_TOKEN) return process.env.GOOGLE_OAUTH_ACCESS_TOKEN;
   
-  // Cache de credenciales del metadata server
+  // 2. Si tenemos un token en caché válido, úsalo
   if (credentials && credentials.expires > Date.now()) return credentials.value;
   
-  const response = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
-    headers: { 'Metadata-Flavor': 'Google' }, 
-    signal: AbortSignal.timeout(4000)
-  });
-  
-  if (!response.ok) throw new Error('No se pudo obtener la identidad del servicio (¿Estás en Cloud Run?).');
-  const { access_token, expires_in } = await response.json();
-  credentials = { value: access_token, expires: Date.now() + (expires_in - 90) * 1000 };
-  return access_token;
+  // 3. Intentar obtener del servidor de metadatos (solo funciona en Cloud Run / GCE)
+  try {
+    const response = await fetch('http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token', {
+      headers: { 'Metadata-Flavor': 'Google' }, 
+      signal: AbortSignal.timeout(2000) // Timeout rápido para no colgar en local
+    });
+    if (response.ok) {
+      const { access_token, expires_in } = await response.json();
+      credentials = { value: access_token, expires: Date.now() + (expires_in - 90) * 1000 };
+      return access_token;
+    }
+  } catch (e) {
+    // Silencioso: significa que no estamos en GCP, pasamos al fallback local
+  }
+
+  // 4. FALLBACK PARA DESARROLLO LOCAL: Usar gcloud CLI
+  try {
+    const { execSync } = await import('node:child_process');
+    // Esto obtiene el token de tu sesión local de gcloud
+    const token = execSync('gcloud auth application-default print-access-token', { encoding: 'utf8' }).trim();
+    credentials = { value: token, expires: Date.now() + 3500 * 1000 }; // Los tokens de gcloud duran ~1 hora
+    return token;
+  } catch (err) {
+    throw new Error('No se pudo obtener credenciales. Ejecuta en tu terminal: gcloud auth application-default login');
+  }
 }
 
 export class GoogleError extends Error {
