@@ -105,10 +105,13 @@ function fillGallery() {
   const welcomeStatus = document.querySelector('#welcome-status');
   const welcomeKey = 'bienvenida-galeria';
 
+  // Elementos de reproducción de la ficha
+  const summaryButton = document.querySelector('#summary');
+
   // Actualizar la obra seleccionada
   const sync = () => {
     const work = catalog[selected];
-    if (!work) return;
+    if (!work || !current) return;
 
     const count = document.createElement('p');
     count.className = 'muted small';
@@ -120,7 +123,6 @@ function fillGallery() {
 
     titleLink.href = workLink(work);
     titleLink.textContent = work.title;
-
     title.append(titleLink);
 
     const artist = document.createElement('p');
@@ -132,70 +134,104 @@ function fillGallery() {
 
     current.replaceChildren(count, title, artist, summary);
 
-    renderCards(cards, catalog, work.id);
+    if (cards) {
+      renderCards(cards, catalog, work.id);
+    }
   };
 
-  // Reproducir o pausar la bienvenida
-  // ==========================================
-  // BIENVENIDA CON SÍNTESIS DE VOZ
-  // ==========================================
+  // Reproducir la descripción de la obra
+  const preview = () => {
+    const work = catalog[selected];
+    if (!work || !summaryButton) return;
 
+    const key = `ficha-${work.id}`;
+
+    playVoice(
+      key,
+      `${work.title}, de ${work.artist}. ${work.summary}`,
+      work.summaryAudio,
+      state => {
+        switch (state) {
+          case 'playing':
+            summaryButton.textContent = 'Pausar ficha';
+            summaryButton.setAttribute('aria-pressed', 'true');
+            break;
+
+          case 'paused':
+            summaryButton.textContent = 'Reanudar ficha';
+            summaryButton.setAttribute('aria-pressed', 'false');
+            break;
+
+          case 'unavailable':
+            summaryButton.textContent = 'Escuchar ficha';
+            summaryButton.setAttribute('aria-pressed', 'false');
+
+            if (caption) {
+              caption.textContent =
+                `${work.title}, de ${work.artist}. ${work.summary}`;
+            }
+            break;
+
+          default:
+            summaryButton.textContent = 'Escuchar ficha';
+            summaryButton.setAttribute('aria-pressed', 'false');
+        }
+      }
+    );
+  };
+
+  // Bienvenida: reproducir, pausar y reanudar
   if (welcomeButton) {
     welcomeButton.setAttribute('aria-pressed', 'false');
 
     welcomeButton.addEventListener('click', () => {
-      const state = audioStatus(welcomeKey);
-
-      // Si está reproduciéndose, pausar.
-      if (state === 'playing') {
+      if (audioStatus(welcomeKey) === 'playing') {
         pauseVoice(welcomeKey);
         return;
       }
 
-      // Reproducir directamente el texto mediante la voz
-      // disponible en el navegador, sin depender del WAV.
       playVoice(
         welcomeKey,
         welcome,
         null,
-        playbackState => {
-          if (playbackState === 'playing') {
+        state => {
+          if (state === 'playing') {
             welcomeButton.textContent = 'Pausar bienvenida';
             welcomeButton.setAttribute('aria-pressed', 'true');
 
-            welcomeStatus.textContent =
-              'Reproduciendo mensaje de bienvenida.';
-          }
-
-          else if (playbackState === 'paused') {
+            if (welcomeStatus) {
+              welcomeStatus.textContent =
+                'Reproduciendo mensaje de bienvenida.';
+            }
+          } else if (state === 'paused') {
             welcomeButton.textContent = 'Reanudar bienvenida';
             welcomeButton.setAttribute('aria-pressed', 'false');
 
-            welcomeStatus.textContent =
-              'Bienvenida pausada.';
-          }
-
-          else if (playbackState === 'unavailable') {
+            if (welcomeStatus) {
+              welcomeStatus.textContent = 'Bienvenida pausada.';
+            }
+          } else if (state === 'unavailable') {
             welcomeButton.textContent = 'Intentar nuevamente';
             welcomeButton.setAttribute('aria-pressed', 'false');
 
-            welcomeStatus.textContent =
-              'No fue posible reproducir la bienvenida. Comprueba que tu navegador permita la síntesis de voz.';
-          }
-
-          else {
+            if (welcomeStatus) {
+              welcomeStatus.textContent =
+                'No fue posible reproducir la bienvenida. Comprueba que tu navegador permita la síntesis de voz.';
+            }
+          } else {
             welcomeButton.textContent = 'Escuchar bienvenida';
             welcomeButton.setAttribute('aria-pressed', 'false');
 
-            welcomeStatus.textContent =
-              'La bienvenida ha terminado.';
+            if (welcomeStatus) {
+              welcomeStatus.textContent =
+                'La bienvenida ha terminado.';
+            }
           }
         }
       );
     });
   }
 
-  // Mostrar la galería
   // Mostrar la galería
   function showGallery() {
     if (!galleryContent) return;
@@ -211,16 +247,16 @@ function fillGallery() {
 
     if (heading) {
       heading.setAttribute('tabindex', '-1');
-
-      setTimeout(() => {
-        heading.focus({ preventScroll: true });
-      }, 300);
+      heading.focus({ preventScroll: true });
     }
   }
 
-  // Regresar al menú
+  // Regresar al menú principal
   function showMenu() {
-    if (!menu) return;
+    if (!menu || !galleryContent) return;
+
+    stopVoice();
+    galleryContent.hidden = true;
 
     menu.scrollIntoView({
       behavior: 'smooth',
@@ -229,129 +265,107 @@ function fillGallery() {
 
     exploreButton?.focus({ preventScroll: true });
   }
-  // Escuchar la descripción de la obra
-  const preview = () => {
-    const work = catalog[selected];
-    if (!work) return;
 
-    playVoice(
-      `ficha-${work.id}`,
-      `${work.title}, de ${work.artist}. ${work.summary}`,
-      work.summaryAudio,
-      state => {
-        document.querySelector('#summary').textContent =
-          state === 'playing' ? 'Pausar ficha' : 'Escuchar ficha';
-
-        if (state === 'unavailable') {
-          caption.textContent =
-            `${work.title}, de ${work.artist}. ${work.summary}`;
-        }
-      }
-    );
-  };
+  // Eventos de navegación
+  exploreButton?.addEventListener('click', showGallery);
+  backButton?.addEventListener('click', showMenu);
 
   // Cambiar de obra
   const step = delta => {
     stopVoice();
 
-    selected = (selected + delta + catalog.length) % catalog.length;
+    selected =
+      (selected + delta + catalog.length) % catalog.length;
+
+    if (summaryButton) {
+      summaryButton.textContent = 'Escuchar ficha';
+      summaryButton.setAttribute('aria-pressed', 'false');
+    }
 
     sync();
 
     if (preferences.automatic) {
       preview();
-    } else {
+    } else if (caption) {
       caption.textContent =
         `${selected + 1} de ${catalog.length}. ${catalog[selected].title}`;
     }
   };
 
-  document.querySelector('#previous').onclick = () => step(-1);
-  document.querySelector('#next').onclick = () => step(1);
+  // Botones anterior y siguiente
+  document.querySelector('#previous')?.addEventListener(
+    'click',
+    () => step(-1)
+  );
 
-  document.querySelector('#summary').onclick = () => {
-    const key = `ficha-${catalog[selected].id}`;
+  document.querySelector('#next')?.addEventListener(
+    'click',
+    () => step(1)
+  );
 
-    if (audioStatus(key) === 'playing') {
-      pauseVoice(key);
-    } else {
-      preview();
-    }
-  };
+  // Botón escuchar ficha
+  if (summaryButton) {
+    summaryButton.textContent = 'Escuchar ficha';
+    summaryButton.setAttribute('aria-pressed', 'false');
 
-  // Navegación táctil existente
-  let start;
+    summaryButton.addEventListener('click', () => {
+      const work = catalog[selected];
+      if (!work) return;
 
-  focus.onpointerdown = event => {
-    if (event.pointerType !== 'touch' ||
-        event.target.closest('a,button')) return;
+      const key = `ficha-${work.id}`;
+      const state = audioStatus(key);
 
-    start = {
-      id: event.pointerId,
-      x: event.clientX,
-      y: event.clientY
+      if (state === 'playing') {
+        pauseVoice(key);
+      } else {
+        preview();
+      }
+    });
+  }
+
+  // Navegación táctil
+  let start = null;
+
+  if (focus) {
+    focus.onpointerdown = event => {
+      if (
+        event.pointerType !== 'touch' ||
+        event.target.closest('a, button')
+      ) return;
+
+      start = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY
+      };
+
+      focus.setPointerCapture(event.pointerId);
     };
 
-    focus.setPointerCapture(event.pointerId);
-  };
+    focus.onpointerup = event => {
+      if (!start || event.pointerId !== start.id) return;
 
-  focus.onpointerup = event => {
-    if (!start || event.pointerId !== start.id) return;
+      const dx = event.clientX - start.x;
+      const dy = event.clientY - start.y;
 
-    const dx = event.clientX - start.x;
-    const dy = event.clientY - start.y;
+      start = null;
 
-    start = null;
+      if (
+        Math.abs(dy) > 40 &&
+        Math.abs(dy) > Math.abs(dx)
+      ) {
+        step(dy < 0 ? 1 : -1);
+      }
+    };
 
-    if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) {
-      step(dy < 0 ? 1 : -1);
-    }
-  };
+    focus.onpointercancel = () => {
+      start = null;
+    };
+  }
 
-  focus.onpointercancel = () => {
-    start = null;
-  };
-
-  // Preparar la primera obra sin mostrarla todavía
+  // Preparar la primera obra
   sync();
 }
-  const preview = () => {
-    const work = catalog[selected];
-    if (!work) return;
-    playVoice(`ficha-${work.id}`, `${work.title}, de ${work.artist}. ${work.summary}`, work.summaryAudio, state => {
-      document.querySelector('#summary').textContent = state === 'playing' ? 'Pausar ficha' : 'Escuchar ficha';
-      if (state === 'unavailable') caption.textContent = `${work.title}, de ${work.artist}. ${work.summary}`;
-    });
-  };
-  const step = delta => {
-    stopVoice();
-    selected = (selected + delta + catalog.length) % catalog.length;
-    sync();
-    if (preferences.automatic) preview();
-    else caption.textContent = `${selected + 1} de ${catalog.length}. ${catalog[selected].title}`;
-  };
-  document.querySelector('#previous').onclick = () => step(-1);
-  document.querySelector('#next').onclick = () => step(1);
-  document.querySelector('#summary').onclick = () => {
-    const key = `ficha-${catalog[selected].id}`;
-    if (audioStatus(key) === 'playing') pauseVoice(key);
-    else preview();
-  };
-  let start;
-  focus.onpointerdown = event => {
-    if (event.pointerType !== 'touch' || event.target.closest('a,button')) return;
-    start = { id: event.pointerId, x: event.clientX, y: event.clientY };
-    focus.setPointerCapture(event.pointerId);
-  };
-  focus.onpointerup = event => {
-    if (!start || event.pointerId !== start.id) return;
-    const dx = event.clientX - start.x;
-    const dy = event.clientY - start.y;
-    start = null;
-    if (Math.abs(dy) > 40 && Math.abs(dy) > Math.abs(dx)) step(dy < 0 ? 1 : -1);
-  };
-  focus.onpointercancel = () => { start = null; };
-  sync();
 
 function fillSearch() {
   const input = document.querySelector('#query');
