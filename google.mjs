@@ -150,6 +150,28 @@ export function commitPublication(id, draftUpdateTime, artwork) {
   });
 }
 
+export async function deleteDoc(collection, id) {
+  // Obtiene el token de autenticación de tu cuenta de servicio
+  const token = await credential(); 
+  
+  // URL de la API REST de Firestore
+  const url = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${collection}/${id}`;
+  
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'x-goog-user-project': PROJECT_ID
+    }
+  });
+
+  // Si la respuesta no es exitosa (y no es un 404, que significa que ya estaba borrado), lanzamos error
+  if (!response.ok && response.status !== 404) {
+    const errText = await response.text();
+    throw new Error(`Error al eliminar documento de Firestore: ${response.status} - ${errText}`);
+  }
+}
+
 export function saveObject(name, bytes, type) {
   const query = new URLSearchParams({ uploadType: 'media', name });
   return call('Cloud Storage', `https://storage.googleapis.com/upload/storage/v1/b/${BUCKET_NAME}/o?${query}`, {

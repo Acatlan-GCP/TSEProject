@@ -108,6 +108,17 @@ async function loadDashboard() {
     document.getElementById('user-display-name').textContent = currentUser.username || currentUser.realName;
     document.getElementById('user-role').textContent = currentUser.role;
 
+    const header = document.querySelector('.dashboard-header') || document.querySelector('header');
+    if (header && !document.getElementById('btn-to-gallery')) {
+      const galleryBtn = document.createElement('a');
+      galleryBtn.id = 'btn-to-gallery';
+      galleryBtn.href = '/galeria/';
+      galleryBtn.className = 'button secondary';
+      galleryBtn.textContent = '🎨 Ver Galería';
+      galleryBtn.style.marginLeft = 'auto'; // Lo empuja a la derecha
+      header.appendChild(galleryBtn);
+    }
+
     const worksData = await apiCall('/api/admin/works');
     renderWorks(worksData.works || []);
     showView('view-dashboard');
@@ -164,21 +175,31 @@ async function openEditor(workId) {
   zones = [];
   document.getElementById('form-work').reset();
   document.getElementById('image-editor').hidden = true;
-  document.getElementById('zones-container').innerHTML = '';
   document.getElementById('zones-list').innerHTML = '';
 
   if (workId) {
-    // Cargar obra existente (reutilizamos el endpoint público de works)
     const data = await apiCall(`/api/admin/works/${workId}`);
     currentWork = data.work;
     document.getElementById('editor-title').textContent = 'Editar obra';
-    document.getElementById('work-author').value = currentWork.author || '';
+    
+    // Llenar campos básicos
+    document.getElementById('work-title').value = currentWork.title || currentWork.author || '';
+    document.getElementById('work-artist').value = currentWork.artist || currentWork.author || '';
+    document.getElementById('work-year').value = currentWork.year || '';
+    document.getElementById('work-technique').value = currentWork.technique || '';
+    document.getElementById('work-category').value = currentWork.category || '';
     document.getElementById('work-exhibition').value = currentWork.exhibitionPlace || '';
-    document.getElementById('work-description').value = currentWork.aiDescription || '';
+    
+    // 👇 Campo de introducción
+    document.getElementById('work-intro').value = currentWork.intro || currentWork.aiDescription || '';
+    
     zones = currentWork.zones || [];
     if (currentWork.imagePath) {
       await loadImagePreview(`/api/media/${workId}/imagen`);
     }
+    
+    // 👇 Actualizar reproductor de intro si existe
+    updateIntroPlayer();
   } else {
     currentWork = null;
     document.getElementById('editor-title').textContent = 'Nueva obra';
@@ -424,7 +445,17 @@ function renderZonesList() {
                 onchange="updateZoneText(${index}, this.value)"
                 rows="2"
                 style="flex: 1;">${zone.text || ''}</textarea>
-      <button class="btn-delete-zone" onclick="deleteZone(${index})">🗑️</button>
+      
+      <!-- 👇 NUEVO: Input para audio de zona -->
+      <div style="display: flex; flex-direction: column; gap: 5px; min-width: 180px;">
+        <input type="file" id="zone-audio-${index}" accept="audio/*" style="font-size: 11px;">
+        <button type="button" onclick="uploadZoneAudio(${index})" style="padding: 4px 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          🎵 Audio zona
+        </button>
+        ${zone.audioPath ? '<small style="color: green; font-size: 11px;">✅ Audio guardado</small>' : ''}
+      </div>
+
+      <button class="btn-delete-zone" onclick="deleteZone(${index})" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
     </div>
   `).join('');
 }
@@ -451,62 +482,6 @@ document.addEventListener('click', (e) => {
   }
 });
 
-// Generar IA
-document.getElementById('btn-generate-ai').addEventListener('click', async () => {
-  if (!currentWork) {
-    showError('work-error', 'Primero guarda la obra como borrador.');
-    return;
-  }
-  
-  clearError('work-error');
-  clearError('work-success');
-  
-  try {
-    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-description`, { method: 'POST' });
-    currentWork = data.work;
-    
-    // Actualizar el campo de descripción
-    document.getElementById('work-description').value = currentWork.aiDescription || '';
-    
-    // Actualizar las zonas
-    zones = currentWork.zones || [];
-    renderZones();
-    
-    // Mostrar mensaje de éxito
-    document.getElementById('work-success').textContent = '✅ Descripción y zonas generadas con IA';
-    show(document.getElementById('work-success'), false);
-    
-    console.log('✅ Descripción generada:', currentWork.aiDescription);
-  } catch (err) {
-    showError('work-error', err.message);
-  }
-});
-
-// Generar audio ElevenLabs (solo audio)
-document.getElementById('btn-generate-audio').addEventListener('click', async () => {
-  if (!currentWork) {
-    showError('work-error', 'Primero guarda la obra como borrador.');
-    return;
-  }
-  
-  if (!currentWork.aiDescription) {
-    showError('work-error', 'Primero debes generar la descripción con IA.');
-    return;
-  }
-  
-  clearError('work-error');
-  clearError('work-success');
-  
-  try {
-    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-audio`, { method: 'POST' });
-    currentWork = data.work;
-    
-    document.getElementById('work-success').textContent = '✅ Audio generado con ElevenLabs';
-    show(document.getElementById('work-success'), false);
-  } catch (err) {
-    showError('work-error', err.message);
-  }
-});
 
 // Guardar obra
 document.getElementById('form-work').addEventListener('submit', async (e) => {
@@ -518,7 +493,6 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
     const imageInput = document.getElementById('work-image');
     let imageData = null, imageType = null;
 
-    // 1. Solo procesamos la imagen si el usuario seleccionó un archivo nuevo
     if (imageInput.files[0]) {
       const file = imageInput.files[0];
       imageType = file.type;
@@ -528,29 +502,29 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
         reader.readAsDataURL(file);
       });
       imageData = base64;
-    } 
-    // 2. 👇 AQUÍ ESTÁ LA CLAVE: Solo lanzamos error si es una obra NUEVA y no hay imagen
-    else if (!currentWork) {
+    } else if (!currentWork) {
       showError('work-error', 'Debes seleccionar una imagen para crear una obra nueva.');
       return;
     }
 
     const body = {
-      author: document.getElementById('work-author').value,
+      title: document.getElementById('work-title').value,
+      artist: document.getElementById('work-artist').value,
+      year: document.getElementById('work-year').value,
+      technique: document.getElementById('work-technique').value,
+      category: document.getElementById('work-category').value,
       exhibitionPlace: document.getElementById('work-exhibition').value,
+      intro: document.getElementById('work-intro').value, // 👇 Campo de introducción
       zones: zones,
-      aiDescription: document.getElementById('work-description').value,
       imageType,
-      imageData // Si es null, el backend ignorará este campo y conservará la imagen anterior
+      imageData
     };
 
     if (currentWork) {
       await apiCall(`/api/admin/works/${currentWork.id}`, { method: 'PUT', body });
       show(document.getElementById('work-success'), false);
       document.getElementById('work-success').textContent = '✅ Obra actualizada';
-      
-      // 👇 Limpiar el input de archivo para que no se vuelva a enviar por accidente en el futuro
-      imageInput.value = ''; 
+      imageInput.value = '';
     } else {
       const data = await apiCall('/api/admin/works', { method: 'POST', body });
       currentWork = data.work;
@@ -648,6 +622,249 @@ window.openEditor = async function(workId) {
   updateAudioPlayer();
 };
 
+// ==========================================
+// SUBIR AUDIO AMBIENTAL
+// ==========================================
+document.getElementById('btn-upload-ambience')?.addEventListener('click', async () => {
+  if (!currentWork) return showError('audio-error', 'Primero guarda la obra como borrador.');
+  const file = document.getElementById('work-ambience').files[0];
+  if (!file) return showError('audio-error', 'Selecciona un archivo de audio ambiental.');
+  if (file.size > 15 * 1024 * 1024) return showError('audio-error', 'El audio no puede superar los 15MB.');
+
+  try {
+    const btn = document.getElementById('btn-upload-ambience');
+    btn.disabled = true; btn.textContent = '⏳ Subiendo...';
+    
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-ambience`, {
+      method: 'POST',
+      body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+    });
+
+    currentWork = data.work;
+    document.getElementById('work-ambience').value = '';
+    showSuccess('✅ Audio ambiental subido correctamente');
+  } catch (err) {
+    showError('audio-error', err.message);
+  } finally {
+    const btn = document.getElementById('btn-upload-ambience');
+    btn.disabled = false; btn.textContent = '📤 Subir ambiente';
+  }
+});
+
+// ==========================================
+// SUBIR AUDIO DE UNA ZONA ESPECÍFICA
+// ==========================================
+window.uploadZoneAudio = async (index) => {
+  if (!currentWork) return alert('Primero guarda la obra como borrador.');
+  const fileInput = document.getElementById(`zone-audio-${index}`);
+  const file = fileInput.files[0];
+  if (!file) return alert('Selecciona un archivo de audio para esta zona.');
+  if (file.size > 15 * 1024 * 1024) return alert('El audio no puede superar los 15MB.');
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/zones/${index}/upload-audio`, {
+      method: 'POST',
+      body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+    });
+
+    currentWork = data.work;
+    fileInput.value = '';
+    renderZonesList(); // Refrescar para mostrar el check verde
+    showSuccess('✅ Audio de la zona subido correctamente');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+};
+
+// Helper para mensajes de éxito
+function showSuccess(msg) {
+  const el = document.getElementById('audio-success');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ==========================================
+// GENERAR INTRODUCCIÓN CON IA
+// ==========================================
+const btnGenerateIntroAI = document.getElementById('btn-generate-intro-ai');
+if (btnGenerateIntroAI) {
+  btnGenerateIntroAI.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    try {
+      btnGenerateIntroAI.disabled = true;
+      btnGenerateIntroAI.textContent = '⏳ Generando...';
+      
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-intro`, { method: 'POST' });
+      currentWork = data.work;
+      
+      document.getElementById('work-intro').value = currentWork.intro || '';
+      showSuccess('intro-success', '✅ Introducción generada con IA');
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnGenerateIntroAI.disabled = false;
+      btnGenerateIntroAI.textContent = '🤖 Generar con IA';
+    }
+  });
+}
+
+// ==========================================
+// GENERAR AUDIO TTS DE LA INTRODUCCIÓN
+// ==========================================
+const btnGenerateIntroTTS = document.getElementById('btn-generate-intro-tts');
+if (btnGenerateIntroTTS) {
+  btnGenerateIntroTTS.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    const introText = document.getElementById('work-intro').value.trim();
+    if (!introText) return showError('intro-error', 'Primero escribe o genera la introducción.');
+    
+    try {
+      btnGenerateIntroTTS.disabled = true;
+      btnGenerateIntroTTS.textContent = '⏳ Generando audio...';
+      
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-intro-audio`, {
+        method: 'POST',
+        body: { introText }
+      });
+      
+      currentWork = data.work;
+      showSuccess('intro-success', '✅ Audio de introducción generado con TTS');
+      updateIntroPlayer();
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnGenerateIntroTTS.disabled = false;
+      btnGenerateIntroTTS.textContent = '🔊 Generar audio con TTS';
+    }
+  });
+}
+
+// ==========================================
+// SUBIR AUDIO DE INTRODUCCIÓN MANUAL
+// ==========================================
+const btnUploadIntroAudio = document.getElementById('btn-upload-intro-audio');
+if (btnUploadIntroAudio) {
+  btnUploadIntroAudio.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    const fileInput = document.getElementById('work-intro-audio');
+    const file = fileInput.files[0];
+    if (!file) return showError('intro-error', 'Selecciona un archivo de audio.');
+    if (file.size > 15 * 1024 * 1024) return showError('intro-error', 'El audio no puede superar los 15MB.');
+    
+    try {
+      btnUploadIntroAudio.disabled = true;
+      btnUploadIntroAudio.textContent = '⏳ Subiendo...';
+      
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-intro-audio`, {
+        method: 'POST',
+        body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+      });
+      
+      currentWork = data.work;
+      fileInput.value = '';
+      showSuccess('intro-success', '✅ Audio de introducción subido correctamente');
+      updateIntroPlayer();
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnUploadIntroAudio.disabled = false;
+      btnUploadIntroAudio.textContent = '📤 Subir audio';
+    }
+  });
+}
+
+// ==========================================
+// SUBIR AUDIO AMBIENTAL
+// ==========================================
+const btnUploadAmbience = document.getElementById('btn-upload-ambience');
+if (btnUploadAmbience) {
+  btnUploadAmbience.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    const fileInput = document.getElementById('work-ambience');
+    const file = fileInput.files[0];
+    if (!file) return showError('intro-error', 'Selecciona un archivo de audio ambiental.');
+    if (file.size > 15 * 1024 * 1024) return showError('intro-error', 'El audio no puede superar los 15MB.');
+
+    try {
+      btnUploadAmbience.disabled = true;
+      btnUploadAmbience.textContent = '⏳ Subiendo...';
+      
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-ambience`, {
+        method: 'POST',
+        body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+      });
+
+      currentWork = data.work;
+      fileInput.value = '';
+      showSuccess('intro-success', '✅ Audio ambiental subido correctamente');
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnUploadAmbience.disabled = false;
+      btnUploadAmbience.textContent = '📤 Subir ambiente';
+    }
+  });
+}
+
+// ==========================================
+// ACTUALIZAR REPRODUCTOR DE INTRO
+// ==========================================
+function updateIntroPlayer() {
+  const container = document.getElementById('intro-player-container');
+  const player = document.getElementById('intro-player');
+  if (!container || !player || !currentWork) return;
+  
+  if (currentWork.introAudioPath) {
+    player.src = `/api/media/${currentWork.id}/intro`;
+    container.style.display = 'block';
+  } else {
+    player.src = '';
+    container.style.display = 'none';
+  }
+}
+
+// Helper para mensajes de éxito
+function showSuccess(elId, msg) {
+  const el = document.getElementById(elId);
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+}
 
 // ==========================================
 // INICIALIZACIÓN

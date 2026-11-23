@@ -610,8 +610,29 @@ async function loadWork() {
       work = null;
     }
   }
-  if (work) fillWork(work);
-  else {
+  if (work) {
+    // 👇 MAPEO DE AUDIOS DE LA NUBE AL FORMATO QUE ESPERA player.js
+    const cloudWork = {
+      ...work,
+      // 1. Audio ambiental de fondo
+      ambientAudio: work.ambientAudioPath ? `/api/media/${work.id}/ambiente` : '',
+      
+      // 2. Audio de introducción / resumen (Botón "Escuchar introducción")
+      introAudio: work.introAudioPath ? `/api/media/${work.id}/intro` : (work.narrationAudioPath ? `/api/media/${work.id}/narracion` : ''),
+      
+      // 3. Audio de ficha/resumen (si lo tienes separado)
+      summaryAudio: work.summaryAudioPath ? `/api/media/${work.id}/ficha` : '',
+      
+      // 4. Audio para cada zona de la imagen
+      zones: work.zones.map((zone, index) => ({
+        ...zone,
+        // Genera la ruta dinámica para la zona (zona-1, zona-2, etc.)
+        audio: zone.audioPath ? `/api/media/${work.id}/zona-${index + 1}` : ''
+      }))
+    };
+    
+    fillWork(cloudWork);
+  } else {
     document.querySelector('#work-title').textContent = 'Obra no disponible';
     document.querySelector('#work-meta').textContent = 'Puedes volver a la galería o comprobar tu conexión.';
   }
@@ -634,6 +655,10 @@ async function initialize() {
     session.configure(data);
     const accountLink = document.querySelector('#account-link');
     if (accountLink) accountLink.hidden = !services.cloud;
+    const adminLink = document.querySelector('#admin-link');
+    if (adminLink) {
+      adminLink.hidden = !session.user; 
+    }
   });
   const catalogPromise = loadCatalog();
   await Promise.allSettled([configPromise, catalogPromise]);
