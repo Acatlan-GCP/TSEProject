@@ -10,12 +10,11 @@ export const ALLOW_REGISTRATION = process.env.ALLOW_REGISTRATION === 'true';
 
 export const FIRESTORE_DATABASE = process.env.FIRESTORE_DATABASE || '(default)';
 export const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
-export const VERTEX_LOCATION = process.env.VERTEX_LOCATION || 'global';
-export const TTS_VOICE = process.env.TTS_VOICE || 'es-US-Neural2-A';
 export const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
-export const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY || '';
-export const ELEVENLABS_VOICE_ID = process.env.ELEVENLABS_VOICE_ID || '';
+export const TTS_VOICE_NAME = process.env.TTS_VOICE_NAME || 'es-US-Chirp3-HD-Despina'; // Voz femenina de México
+export const TTS_LANGUAGE_CODE = process.env.TTS_LANGUAGE_CODE || 'es-us';
+export const TTS_AUDIO_ENCODING = process.env.TTS_AUDIO_ENCODING || 'MP3';
 
 // cloudEnabled será true solo si tienes Project ID y Bucket
 export const cloudEnabled = Boolean(PROJECT_ID && BUCKET_NAME);

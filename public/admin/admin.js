@@ -207,80 +207,248 @@ async function loadImagePreview(src, mimeType = 'image/jpeg') {
   await new Promise(r => img.onload = r);
   renderZones();
 }
+let selectedZoneIndex = null;
 
 // Renderizar zonas sobre la imagen
 function renderZones() {
-  const container = document.getElementById('zones-container');
-  const list = document.getElementById('zones-list');
-  container.innerHTML = '';
-  list.innerHTML = '';
-
-  zones.forEach((zone, idx) => {
-    // Caja sobre la imagen
+  const container = document.getElementById('image-editor');
+  if (!container) return;
+  
+  // Limpiar zonas anteriores (pero mantener la imagen)
+  container.querySelectorAll('.zone-box').forEach(el => el.remove());
+  
+  const img = container.querySelector('img');
+  if (!img) return;
+  
+  const imgWidth = img.clientWidth;
+  const imgHeight = img.clientHeight;
+  
+  zones.forEach((zone, index) => {
+    const [left, top, width, height] = zone.bounds;
+    
     const box = document.createElement('div');
-    box.className = 'zone-box';
-    box.style.left = `${zone.bounds[0] * 100}%`;
-    box.style.top = `${zone.bounds[1] * 100}%`;
-    box.style.width = `${zone.bounds[2] * 100}%`;
-    box.style.height = `${zone.bounds[3] * 100}%`;
-    box.title = zone.label;
-    box.dataset.idx = idx;
-    makeDraggable(box, idx);
-    container.appendChild(box);
-
-    // Lista editable
-    const item = document.createElement('div');
-    item.className = 'zone-item';
-    item.innerHTML = `
-      <strong>Zona ${idx + 1}: ${zone.label || 'Sin nombre'}</strong>
-      <div><small>Posición: [${zone.bounds.map(b => b.toFixed(2)).join(', ')}]</small></div>
-      <textarea placeholder="Descripción de la zona..." data-zone-idx="${idx}">${zone.text || ''}</textarea>
-    `;
-    list.appendChild(item);
-  });
-
-  // Listener para actualizar texto de zona
-  list.querySelectorAll('textarea').forEach(ta => {
-    ta.addEventListener('input', (e) => {
-      const idx = parseInt(e.target.dataset.zoneIdx);
-      zones[idx].text = e.target.value;
-    });
-  });
-}
-
-// Drag básico para mover zonas
-function makeDraggable(box, idx) {
-  let isDragging = false, startX, startY, startLeft, startTop;
-  const img = document.getElementById('preview-image');
-
-  box.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startLeft = parseFloat(box.style.left);
-    startTop = parseFloat(box.style.top);
-    e.preventDefault();
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    const dx = ((e.clientX - startX) / img.offsetWidth) * 100;
-    const dy = ((e.clientY - startY) / img.offsetHeight) * 100;
-    let newLeft = Math.max(0, Math.min(100 - parseFloat(box.style.width), startLeft + dx));
-    let newTop = Math.max(0, Math.min(100 - parseFloat(box.style.height), startTop + dy));
-    box.style.left = `${newLeft}%`;
-    box.style.top = `${newTop}%`;
-    zones[idx].bounds[0] = newLeft / 100;
-    zones[idx].bounds[1] = newTop / 100;
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false;
-      renderZones(); // Actualizar lista con nuevas coords
+    box.className = 'zone-box' + (selectedZoneIndex === index ? ' selected' : '');
+    box.style.left = `${left * imgWidth}px`;
+    box.style.top = `${top * imgHeight}px`;
+    box.style.width = `${width * imgWidth}px`;
+    box.style.height = `${height * imgHeight}px`;
+    box.dataset.index = index;
+    
+    // Etiqueta
+    const label = document.createElement('div');
+    label.className = 'zone-label';
+    label.textContent = zone.label || `Zona ${index + 1}`;
+    box.appendChild(label);
+    
+    // Botón eliminar (solo si está seleccionada)
+    if (selectedZoneIndex === index) {
+      const deleteBtn = document.createElement('div');
+      deleteBtn.className = 'zone-delete';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.title = 'Eliminar zona';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteZone(index);
+      });
+      box.appendChild(deleteBtn);
+      
+      // Handles de redimensionamiento
+      ['tl', 'tr', 'bl', 'br'].forEach(corner => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle ${corner}`;
+        handle.addEventListener('mousedown', (e) => startResize(e, index, corner));
+        box.appendChild(handle);
+      });
     }
+    
+    // Eventos de interacción
+    box.addEventListener('mousedown', (e) => startDrag(e, index));
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectZone(index);
+    });
+    
+    container.appendChild(box);
   });
+  
+  // Renderizar lista de zonas debajo
+  renderZonesList();
 }
+
+function selectZone(index) {
+  selectedZoneIndex = (selectedZoneIndex === index) ? null : index;
+  renderZones();
+}
+
+function deleteZone(index) {
+  if (!confirm(`¿Eliminar "${zones[index].label || 'Zona ' + (index + 1)}"?`)) return;
+  zones.splice(index, 1);
+  selectedZoneIndex = null;
+  renderZones();
+}
+
+
+
+function addZone() {
+  const newZone = {
+    label: `Zona ${zones.length + 1}`,
+    bounds: [0.1, 0.1, 0.3, 0.3], // Posición inicial: esquina superior izquierda
+    text: 'Descripción de la nueva zona'
+  };
+  zones.push(newZone);
+  selectedZoneIndex = zones.length - 1;
+  renderZones();
+}
+
+function startDrag(e, index) {
+  if (e.target.classList.contains('resize-handle') || e.target.classList.contains('zone-delete')) return;
+  
+  e.preventDefault();
+  const container = document.getElementById('image-editor');
+  const img = container.querySelector('img');
+  const imgWidth = img.clientWidth;
+  const imgHeight = img.clientHeight;
+  
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const initialBounds = [...zones[index].bounds];
+  
+  function onMouseMove(e) {
+    const dx = (e.clientX - startX) / imgWidth;
+    const dy = (e.clientY - startY) / imgHeight;
+    
+    let [left, top, width, height] = initialBounds;
+    left = Math.max(0, Math.min(1 - width, left + dx));
+    top = Math.max(0, Math.min(1 - height, top + dy));
+    
+    zones[index].bounds = [
+      parseFloat(left.toFixed(4)),
+      parseFloat(top.toFixed(4)),
+      width,
+      height
+    ];
+    renderZones();
+  }
+  
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function startResize(e, index, corner) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const container = document.getElementById('image-editor');
+  const img = container.querySelector('img');
+  const imgRect = img.getBoundingClientRect();
+  const imgWidth = img.clientWidth;
+  const imgHeight = img.clientHeight;
+  
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const initialBounds = [...zones[index].bounds];
+  
+  function onMouseMove(e) {
+    const dx = (e.clientX - startX) / imgWidth;
+    const dy = (e.clientY - startY) / imgHeight;
+    
+    let [left, top, width, height] = initialBounds;
+    
+    switch (corner) {
+      case 'br':
+        width = Math.max(0.05, Math.min(1 - left, width + dx));
+        height = Math.max(0.05, Math.min(1 - top, height + dy));
+        break;
+      case 'bl':
+        const newLeft = Math.max(0, Math.min(left + width - 0.05, left + dx));
+        width = width - (newLeft - left);
+        left = newLeft;
+        height = Math.max(0.05, Math.min(1 - top, height + dy));
+        break;
+      case 'tr':
+        width = Math.max(0.05, Math.min(1 - left, width + dx));
+        const newTop = Math.max(0, Math.min(top + height - 0.05, top + dy));
+        height = height - (newTop - top);
+        top = newTop;
+        break;
+      case 'tl':
+        const newLeftTl = Math.max(0, Math.min(left + width - 0.05, left + dx));
+        const newTopTl = Math.max(0, Math.min(top + height - 0.05, top + dy));
+        width = width - (newLeftTl - left);
+        height = height - (newTopTl - top);
+        left = newLeftTl;
+        top = newTopTl;
+        break;
+    }
+    
+    zones[index].bounds = [
+      parseFloat(left.toFixed(4)),
+      parseFloat(top.toFixed(4)),
+      parseFloat(width.toFixed(4)),
+      parseFloat(height.toFixed(4))
+    ];
+    renderZones();
+  }
+  
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function renderZonesList() {
+  const listContainer = document.getElementById('zones-list');
+  if (!listContainer) return;
+  
+  if (zones.length === 0) {
+    listContainer.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay zonas. Haz clic en "➕ Agregar zona" para crear una.</p>';
+    return;
+  }
+  
+  listContainer.innerHTML = zones.map((zone, index) => `
+    <div class="zone-item" data-index="${index}">
+      <input type="text" value="${zone.label || ''}" 
+             placeholder="Nombre" 
+             onchange="updateZoneLabel(${index}, this.value)"
+             style="flex: 0 0 150px;">
+      <textarea placeholder="Descripción" 
+                onchange="updateZoneText(${index}, this.value)"
+                rows="2"
+                style="flex: 1;">${zone.text || ''}</textarea>
+      <button class="btn-delete-zone" onclick="deleteZone(${index})">🗑️</button>
+    </div>
+  `).join('');
+}
+
+// ==========================================
+// ACTUALIZAR DATOS DE ZONA
+// ==========================================
+function updateZoneLabel(index, value) {
+  zones[index].label = value;
+  renderZones();
+}
+
+function updateZoneText(index, value) {
+  zones[index].text = value;
+}
+
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.zone-box') && !e.target.closest('.zones-list') && !e.target.closest('.btn-add-zone')) {
+    if (selectedZoneIndex !== null) {
+      selectedZoneIndex = null;
+      renderZones();
+    }
+  }
+});
 
 // Generar IA
 document.getElementById('btn-generate-ai').addEventListener('click', async () => {
@@ -288,31 +456,52 @@ document.getElementById('btn-generate-ai').addEventListener('click', async () =>
     showError('work-error', 'Primero guarda la obra como borrador.');
     return;
   }
+  
+  clearError('work-error');
+  clearError('work-success');
+  
   try {
-    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-narration`, { method: 'POST' });
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-description`, { method: 'POST' });
     currentWork = data.work;
+    
+    // Actualizar el campo de descripción
     document.getElementById('work-description').value = currentWork.aiDescription || '';
+    
+    // Actualizar las zonas
     zones = currentWork.zones || [];
     renderZones();
-    showError('work-success', '✅ Descripción y zonas generadas con IA');
-    document.getElementById('work-success').textContent = '✅ Descripción y zonas generadas';
+    
+    // Mostrar mensaje de éxito
+    document.getElementById('work-success').textContent = '✅ Descripción y zonas generadas con IA';
     show(document.getElementById('work-success'), false);
+    
+    console.log('✅ Descripción generada:', currentWork.aiDescription);
   } catch (err) {
     showError('work-error', err.message);
   }
 });
 
-// Generar audio ElevenLabs
+// Generar audio ElevenLabs (solo audio)
 document.getElementById('btn-generate-audio').addEventListener('click', async () => {
   if (!currentWork) {
     showError('work-error', 'Primero guarda la obra como borrador.');
     return;
   }
+  
+  if (!currentWork.aiDescription) {
+    showError('work-error', 'Primero debes generar la descripción con IA.');
+    return;
+  }
+  
+  clearError('work-error');
+  clearError('work-success');
+  
   try {
-    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-narration`, { method: 'POST' });
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-audio`, { method: 'POST' });
     currentWork = data.work;
-    show(document.getElementById('work-success'), false);
+    
     document.getElementById('work-success').textContent = '✅ Audio generado con ElevenLabs';
+    show(document.getElementById('work-success'), false);
   } catch (err) {
     showError('work-error', err.message);
   }
@@ -362,6 +551,93 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
     showError('work-error', err.message);
   }
 });
+
+function updateAudioPlayer() {
+  const container = document.getElementById('audio-player-container');
+  const player = document.getElementById('audio-player');
+  
+  if (!container || !player || !currentWork) return;
+  
+  if (currentWork.narrationAudioPath) {
+    // Construir URL firmada para reproducir
+    player.src = `/api/media/${currentWork.id}/narracion`;
+    container.style.display = 'block';
+  } else {
+    player.src = '';
+    container.style.display = 'none';
+  }
+}
+
+// ==========================================
+// SUBIR AUDIO PROPIO
+// ==========================================
+document.getElementById('btn-upload-audio')?.addEventListener('click', async () => {
+  if (!currentWork) {
+    showError('audio-error', 'Primero guarda la obra como borrador.');
+    return;
+  }
+
+  const audioInput = document.getElementById('work-audio');
+  const file = audioInput.files[0];
+
+  if (!file) {
+    showError('audio-error', 'Selecciona un archivo de audio primero.');
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    showError('audio-error', 'El audio no puede superar los 10MB.');
+    return;
+  }
+
+  clearError('audio-error');
+  document.getElementById('audio-success').style.display = 'none';
+
+  try {
+    const uploadBtn = document.getElementById('btn-upload-audio');
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = '⏳ Subiendo...';
+
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-audio`, {
+      method: 'POST',
+      body: JSON.stringify({
+        audioData: base64,
+        audioType: file.type || 'audio/mpeg'
+      })
+    });
+
+    currentWork = data.work;
+    audioInput.value = '';
+    
+    const successDiv = document.getElementById('audio-success');
+    successDiv.textContent = '✅ Audio subido correctamente';
+    successDiv.style.display = 'block';
+    
+    updateAudioPlayer();
+
+  } catch (err) {
+    showError('audio-error', err.message);
+  } finally {
+    const uploadBtn = document.getElementById('btn-upload-audio');
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = '📤 Subir audio';
+  }
+});
+
+// Llamar a updateAudioPlayer cuando se abre el editor
+const originalOpenEditor = window.openEditor;
+window.openEditor = async function(workId) {
+  await originalOpenEditor?.(workId);
+  updateAudioPlayer();
+};
+
 
 // ==========================================
 // INICIALIZACIÓN

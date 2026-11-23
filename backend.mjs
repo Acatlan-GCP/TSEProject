@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
   registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, commitPublication,
-  saveObject, removeObject, signedObject, describeImage, synthesize, synthesizeElevenLabs
+  saveObject, removeObject, signedObject, describeImage, synthesize, synthesizeSpeech
 } from './google.mjs';
 import { cloudEnabled, BUCKET_NAME } from './gcp.mjs';
 import { HttpError, artworkFields, normalizeNarration, normalizePreferences, text, verifyImage } from './model.mjs';
@@ -154,16 +154,16 @@ export async function api(request, path) {
     return okay({ work: publicData(document.data) });
   }
 
-  const media = path.match(/^\/api\/media\/([a-f0-9-]{36})\/(imagen|ambiente|intro|ficha|zona-[1-4])$/);
+  const media = path.match(/^\/api\/media\/([a-f0-9-]{36})\/(imagen|ambiente|intro|ficha|zona-[1-4]|narracion)$/);
   if (method === 'GET' && media) {
     const [, id, key] = media;
     
-    // Lectura directa para evitar problemas de caché con borradores nuevos
     const document = await readDoc('works', id);
     if (!document) throw notFound();
     
     const artwork = document.data;
     const object = key === 'imagen' ? artwork?.imagePath 
+                  : key === 'narracion' ? artwork?.narrationAudioPath
                   : key === 'ambiente' ? artwork?.ambiencePath 
                   : artwork?.audio?.[key];
                   
@@ -388,57 +388,74 @@ if (path === '/api/admin/register' && method === 'POST') {
   }
 
   // GENERAR DESCRIPCIÓN CON IA Y AUDIO CON ELEVENLABS
-  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-narration$/) && method === 'POST') {
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-description$/) && method === 'POST') {
     const user = await readUser(request);
-    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-narration$/)[1];
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-description$/)[1];
     
     const workDoc = await readDoc('works', workId);
     if (!workDoc) throw notFound();
     
-    // Validar permisos
     if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
       throw new HttpError(403, 'No tienes permisos para editar esta obra.');
     }
 
     const work = workDoc.data;
 
-    // 1. Llamar a Gemini para obtener descripción y zonas (si no las tiene)
-    let aiDescription = work.aiDescription;
-    let zones = work.zones;
+    try {
+      const aiResult = await describeImage({ title: work.author || 'Obra sin título', artist: work.exhibitionPlace || 'Desconocido' }, work.imagePath, work.imageType || 'image/jpeg');
+      
+      const aiDescription = aiResult.intro || aiResult.summary || 'Descripción no disponible.';
+      const zones = aiResult.zones || [];
 
-    if (zones.length === 0 || !aiDescription) {
-      try {
-        const aiResult = await describeImage({ title: work.author || 'Obra sin título', artist: work.exhibitionPlace || 'Desconocido' }, work.imagePath, work.imageType || 'image/jpeg');
-        aiDescription = aiResult.summary || aiResult.intro || 'Descripción no disponible.';
-        zones = aiResult.zones || zones;
-      } catch (error) {
-        console.error("❌ FALLO EN VERTEX AI:", error.message, error.reason || "");
-        throw new HttpError(502, `Error al generar la descripción con IA: ${error.message}`);
-      }
+      const updatedWork = { ...work, aiDescription, zones, updatedAt: new Date().toISOString() };
+      await writeDoc('works', workId, updatedWork);
+
+      return okay({ work: updatedWork });
+    } catch (error) {
+      console.error("❌ FALLO EN VERTEX AI:", error.message);
+      throw new HttpError(502, `Error al generar la descripción con IA: ${error.message}`);
+    }
+  }
+
+  // ==========================================
+  // 🔊 GENERAR SOLO AUDIO CON ELEVENLABS
+  // ==========================================
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-audio$/) && method === 'POST') {
+    const user = await readUser(request);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-audio$/)[1];
+    
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+      throw new HttpError(403, 'No tienes permisos para editar esta obra.');
     }
 
-    // 2. Generar audio con ElevenLabs
-    let narrationAudioPath = work.narrationAudioPath;
-    if (!narrationAudioPath && aiDescription) {
-      try {
-        const audioBytes = await synthesizeElevenLabs(aiDescription);
-        narrationAudioPath = `works/${workId}/audio/narracion.mp3`;
-        await saveObject(narrationAudioPath, audioBytes, 'audio/mpeg');
-      } catch (error) {
-        throw new HttpError(502, 'Error al generar el audio con ElevenLabs.');
-      }
+    const work = workDoc.data;
+
+    if (!work.aiDescription) {
+      throw new HttpError(400, 'Primero debes generar la descripción con IA.');
     }
 
-    // 3. Actualizar Firestore
-    const updatedWork = { ...work, aiDescription, zones, narrationAudioPath };
-    await writeDoc('works', workId, updatedWork);
+    try {
+      // 👇 CAMBIO: synthesizeElevenLabs → synthesizeSpeech
+      const audioBytes = await synthesizeSpeech(work.aiDescription);
+      const narrationAudioPath = `works/${workId}/audio/narracion.mp3`;
+      await saveObject(narrationAudioPath, audioBytes, 'audio/mpeg');
 
-    return okay({ work: updatedWork });
+      const updatedWork = { ...work, narrationAudioPath, updatedAt: new Date().toISOString() };
+      await writeDoc('works', workId, updatedWork);
+
+      return okay({ work: updatedWork });
+    } catch (error) {
+      console.error("❌ FALLO EN CLOUD TTS:", error.message);
+      throw new HttpError(502, `Error al generar el audio con Cloud TTS: ${error.message}`);
+    }
   }
 
   // ACTUALIZAR OBRA (Metadatos o Zonas editadas)
   if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'PUT') {
-    const user = await readUser(request, true);
+    const user = await readUser(request);
     const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
     
     const workDoc = await readDoc('works', workId);
@@ -449,17 +466,29 @@ if (path === '/api/admin/register' && method === 'POST') {
     }
 
     const body = await readBody(request, 10_000_000);
-    const updatedWork = {
-      ...workDoc.data,
-      author: text(body.author, 120, 'autor'),
-      exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
-      zones: body.zones || workDoc.data.zones,
-      aiDescription: body.aiDescription || workDoc.data.aiDescription,
+    const existing = workDoc.data;
+
+    const updated = {
+      ...existing,
+      author: body.author ?? existing.author,
+      exhibitionPlace: body.exhibitionPlace ?? existing.exhibitionPlace,
+      zones: body.zones ?? existing.zones,
+      aiDescription: body.aiDescription ?? existing.aiDescription,
+      narrationAudioPath: body.narrationAudioPath ?? existing.narrationAudioPath,
       updatedAt: new Date().toISOString()
     };
 
-    await writeDoc('works', workId, updatedWork);
-    return okay({ work: updatedWork });
+    // 👇 Solo subir imagen nueva si viene en el body
+    if (body.imageData) {
+      const imagePath = `works/${workId}/art.${body.imageType?.split('/')[1] || 'jpg'}`;
+      const imageBuffer = Buffer.from(body.imageData, 'base64');
+      await saveObject(imagePath, imageBuffer, body.imageType || 'image/jpeg');
+      updated.imagePath = imagePath;
+      updated.imageType = body.imageType || 'image/jpeg';
+    }
+
+    await writeDoc('works', workId, updated);
+    return okay({ work: { id: workId, ...updated } });
   }
 
   // ELIMINAR OBRA
@@ -482,6 +511,45 @@ if (path === '/api/admin/register' && method === 'POST') {
     await call('Firestore', `${endpoint}/works/${encodeURIComponent(workId)}`, { method: 'DELETE' });
 
     return okay({ message: 'Obra eliminada correctamente' });
+}
+if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-audio$/) && method === 'POST') {
+  const user = await readUser(request);
+  const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-audio$/)[1];
+  
+  const workDoc = await readDoc('works', workId);
+  if (!workDoc) throw notFound();
+  
+  if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+    throw new HttpError(403, 'No tienes permisos para editar esta obra.');
+  }
+
+  const body = await readBody(request, 15_000_000); // 15MB máximo
+  
+  if (!body.audioData) {
+    throw new HttpError(400, 'Faltan datos de audio.');
+  }
+
+  try {
+    const audioBuffer = Buffer.from(body.audioData, 'base64');
+    const ext = (body.audioType || 'audio/mpeg').split('/')[1] || 'mp3';
+    const narrationAudioPath = `works/${workId}/audio/narracion.${ext}`;
+    
+    await saveObject(narrationAudioPath, audioBuffer, body.audioType || 'audio/mpeg');
+    
+    const updatedWork = { 
+      ...workDoc.data, 
+      narrationAudioPath, 
+      updatedAt: new Date().toISOString() 
+    };
+    await writeDoc('works', workId, updatedWork);
+    
+    console.log(`✅ Audio subido: ${Math.round(audioBuffer.length / 1024)} KB`);
+    return okay({ work: { id: workId, ...updatedWork } });
+    
+  } catch (error) {
+    console.error("❌ FALLO AL SUBIR AUDIO:", error.message);
+    throw new HttpError(502, `Error al subir el audio: ${error.message}`);
+  }
 }
   throw notFound();
 }
