@@ -71,41 +71,131 @@
       <button id="btn-back" class="btn-secondary">← Volver</button>
       <h2 id="editor-title">Nueva obra</h2>
 
-      <form id="form-work" class="editor-form">
-        <div class="form-group">
-          <label>Autor de la obra</label>
-          <input type="text" id="work-author" required>
-        </div>
-        <div class="form-group">
-          <label>Lugar de exposición</label>
-          <input type="text" id="work-exhibition" required>
-        </div>
-        <div class="form-group">
-          <label>Imagen de la obra</label>
-          <input type="file" id="work-image" accept="image/jpeg,image/png,image/webp" required>
+      <form id="form-work" class="stack">
+        <h3 id="editor-title">Nueva obra</h3>
+        
+        <!-- ========================================== -->
+        <!-- 1. INFORMACIÓN BÁSICA -->
+        <!-- ========================================== -->
+        <div class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+          <div class="form-group" style="flex: 2;">
+            <label for="work-title">Título de la obra *</label>
+            <input type="text" id="work-title" required placeholder="Ej. La gran ola de Kanagawa">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label for="work-artist">Artista / Autor *</label>
+            <input type="text" id="work-artist" required placeholder="Ej. Katsushika Hokusai">
+          </div>
         </div>
 
-        <!-- Zona de edición interactiva -->
+        <div class="form-row" style="display: flex; gap: 15px; flex-wrap: wrap;">
+          <div class="form-group" style="flex: 1;">
+            <label for="work-year">Año</label>
+            <input type="text" id="work-year" placeholder="Ej. 1831">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label for="work-technique">Técnica</label>
+            <input type="text" id="work-technique" placeholder="Ej. Xilografía en color">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label for="work-category">Categoría</label>
+            <input type="text" id="work-category" placeholder="Ej. Paisaje marino">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="work-exhibition">Lugar de exposición</label>
+          <input type="text" id="work-exhibition" placeholder="Ej. Museo de Arte Moderno">
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 2. IMAGEN Y ZONAS -->
+        <!-- ========================================== -->
+        <div class="form-group">
+          <label for="work-image">Imagen de la obra</label>
+          <input type="file" id="work-image" accept="image/jpeg,image/png,image/webp">
+          <small style="color: #666;">(Opcional al editar. Solo selecciona si quieres cambiarla).</small>
+        </div>
+
         <div id="image-editor" class="image-editor" hidden>
           <img id="preview-image" src="" alt="Vista previa">
-          <div id="zones-container"></div>
         </div>
 
-        <div class="editor-actions">
-          <button type="button" id="btn-generate-ai" class="btn-secondary">🤖 Generar descripción y zonas con IA</button>
-          <button type="button" id="btn-generate-audio" class="btn-secondary">🔊 Generar narración con ElevenLabs</button>
-        </div>
-
-        <div class="form-group">
-          <label>Descripción IA (editable)</label>
-          <textarea id="work-description" rows="4"></textarea>
-        </div>
-
+        <button type="button" class="btn-add-zone" onclick="addZone()" style="margin-top: 10px;">➕ Agregar zona manual</button>
         <div id="zones-list" class="zones-list"></div>
 
-        <button type="submit" class="btn-primary">💾 Guardar obra</button>
-        <div id="work-error" class="error-msg" hidden></div>
-        <div id="work-success" class="success-msg" hidden></div>
+        <!-- ========================================== -->
+        <!-- 3. INTRODUCCIÓN A LA OBRA -->
+        <!-- ========================================== -->
+        <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-radius: 8px; border: 2px solid #2196F3;">
+          <h4 style="margin-top: 0; color: #1976D2;">📝 Introducción a la obra</h4>
+          <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+            Este texto se reproducirá al presionar "Escuchar introducción" en la galería pública.
+          </p>
+          
+          <textarea id="work-intro" rows="6" placeholder="Escribe aquí la introducción o genera automáticamente con IA..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 14px;"></textarea>
+          
+          <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" id="btn-generate-intro-ai" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              🤖 Generar con IA
+            </button>
+            <button type="button" id="btn-generate-intro-tts" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+              🔊 Generar audio con TTS
+            </button>
+          </div>
+          
+          <div id="intro-success" style="display: none; margin-top: 10px; padding: 10px; background: #d4edda; color: #155724; border-radius: 4px;"></div>
+          <div id="intro-error" style="display: none; margin-top: 10px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 4px;"></div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 4. AUDIO DE INTRODUCCIÓN (TTS o Manual) -->
+        <!-- ========================================== -->
+        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
+          <h4 style="margin-top: 0;">🎧 Audio de la introducción</h4>
+          
+          <!-- Reproductor -->
+          <div id="intro-player-container" style="display: none; margin: 10px 0;">
+            <audio id="intro-player" controls style="width: 100%;"></audio>
+            <small style="color: #666;">Audio actual guardado</small>
+          </div>
+          
+          <!-- Subir audio manual -->
+          <div style="margin-top: 15px;">
+            <label for="work-intro-audio" style="display: block; margin-bottom: 5px; font-weight: 500;">
+              📤 O sube tu propio audio (MP3/WAV, máx 10MB):
+            </label>
+            <input type="file" id="work-intro-audio" accept="audio/mpeg,audio/mp3,audio/wav" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <button type="button" id="btn-upload-intro-audio" style="margin-left: 10px; padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              📤 Subir audio
+            </button>
+          </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 5. MÚSICA AMBIENTAL -->
+        <!-- ========================================== -->
+        <div style="margin-top: 20px; padding: 15px; background: #f0f8f0; border-radius: 8px; border: 1px solid #c8e6c9;">
+          <h4 style="margin-top: 0;">🌿 Música Ambiental (Fondo)</h4>
+          <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
+            Esta música se reproducirá de fondo mientras se escucha la introducción y las zonas.
+          </p>
+          
+          <input type="file" id="work-ambience" accept="audio/mpeg,audio/mp3,audio/wav" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          <button type="button" id="btn-upload-ambience" style="margin-left: 10px; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            📤 Subir ambiente
+          </button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- 6. BOTONES DE ACCIÓN -->
+        <!-- ========================================== -->
+        <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+          <button type="submit" id="submit-btn" class="button primary">💾 Guardar obra</button>
+        </div>
+
+        <div id="work-success" class="success-msg" hidden style="margin-top: 10px; padding: 10px; background: #d4edda; color: #155724; border-radius: 4px;"></div>
+        <div id="work-error" class="error-msg" hidden style="margin-top: 10px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 4px;"></div>
       </form>
     </div>
   </div>

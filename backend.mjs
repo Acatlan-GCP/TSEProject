@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, commitPublication,
-  saveObject, removeObject, signedObject, describeImage, synthesize, synthesizeElevenLabs
+  registrationEnabled, verifyToken, signIn, readDoc, listDocs, writeDoc, deleteDoc, // 👈 AGREGA deleteDoc AQUÍ
+  commitPublication, saveObject, removeObject, signedObject, describeImage, synthesize, synthesizeSpeech
 } from './google.mjs';
 import { cloudEnabled, BUCKET_NAME } from './gcp.mjs';
 import { HttpError, artworkFields, normalizeNarration, normalizePreferences, text, verifyImage } from './model.mjs';
@@ -15,14 +15,42 @@ let pendingCatalog;
 
 const trackURL = (id, key) => `/api/media/${id}/${key}`;
 function publicData(work) {
-  const { id, title, artist, year, category, technique, source, sound, summary, intro } = work;
+  const title = work.title || work.author || 'Obra sin título';
+  const artist = work.artist || 'Artista desconocido';
+  const year = work.year || 'Año no especificado';
+  const technique = work.technique || 'Técnica no especificada';
+  const category = work.category || 'Galería';
+  const source = work.source || '';
+  const sound = work.sound || '';
+  
+  const intro = work.intro || work.aiDescription || '';
+  const summary = work.summary || work.aiDescription || '';
+
+  const mappedZones = (work.zones || []).map((zone, index) => ({
+    id: zone.id || `zona-${index + 1}`,
+    label: zone.label || `Zona ${index + 1}`,
+    position: zone.position || '',
+    text: zone.text || zone.narration || '',
+    bounds: zone.bounds || [0, 0, 0, 0],
+    audio: zone.audioPath ? trackURL(work.id, `zona-${index + 1}`) : (zone.audio || '')
+  }));
+
   return {
-    id, title, artist, year, category, technique, source, sound, summary, intro,
-    ambientAudio: work.ambiencePath ? trackURL(id, 'ambiente') : '',
-    image: trackURL(id, 'imagen'), summaryAudio: trackURL(id, 'ficha'), introAudio: trackURL(id, 'intro'),
-    zones: work.zones.map(({ id: zoneId, bounds, label, position, text: narration }) => ({
-      id: zoneId, bounds, label, position, text: narration, audio: trackURL(id, zoneId)
-    }))
+    id: work.id,
+    title,
+    artist,
+    year,
+    category,
+    technique,
+    source,
+    sound,
+    summary,
+    intro,
+    ambientAudio: work.ambiencePath ? trackURL(work.id, 'ambiente') : '',
+    image: work.imagePath ? trackURL(work.id, 'imagen') : '',
+    summaryAudio: work.audio?.ficha ? trackURL(work.id, 'ficha') : '',
+    introAudio: work.introAudioPath ? trackURL(work.id, 'intro') : (work.narrationAudioPath ? trackURL(work.id, 'narracion') : (work.audio?.intro ? trackURL(work.id, 'intro') : '')),
+    zones: mappedZones
   };
 }
 
@@ -30,7 +58,12 @@ async function getCatalog() {
   if (catalog && Date.now() < expiration) return catalog;
   if (!pendingCatalog) {
     pendingCatalog = listDocs('works').then(works => {
-      catalog = works.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+      // FIX: Usar createdAt como respaldo si publishedAt no existe (borradores)
+      catalog = works.sort((a, b) => {
+        const dateA = a.publishedAt || a.createdAt || '0';
+        const dateB = b.publishedAt || b.createdAt || '0';
+        return dateB.localeCompare(dateA);
+      });
       expiration = Date.now() + 300000;
       return catalog;
     }).finally(() => { pendingCatalog = null; });
@@ -149,14 +182,37 @@ export async function api(request, path) {
     return okay({ work: publicData(document.data) });
   }
 
-  const media = path.match(/^\/api\/media\/([a-f0-9-]{36})\/(imagen|ambiente|intro|ficha|zona-[1-4])$/);
+  const media = path.match(/^\/api\/media\/([a-f0-9-]{36})\/(imagen|ambiente|intro|ficha|zona-[1-4]|narracion)$/);
   if (method === 'GET' && media) {
     const [, id, key] = media;
-    const works = await getCatalog();
-    const artwork = works.find(work => work.id === id) || (await readDoc('works', id))?.data;
-    const object = key === 'imagen' ? artwork?.imagePath : key === 'ambiente' ? artwork?.ambiencePath : artwork?.audio?.[key];
+    
+    const document = await readDoc('works', id);
+    if (!document) throw notFound();
+    
+    const artwork = document.data;
+    
+    // Lógica robusta para encontrar el archivo correcto
+    let object = null;
+    if (key === 'imagen') {
+      object = artwork?.imagePath;
+    } else if (key === 'narracion' || key === 'intro') {
+      // 👈 AQUÍ ESTÁ LA CLAVE: Si piden 'intro', busca primero en narrationAudioPath
+      object = artwork?.narrationAudioPath || artwork?.audio?.[key];
+    } else if (key === 'ambiente') {
+      object = artwork?.ambiencePath;
+    } else if (key === 'ficha') {
+      object = artwork?.audio?.[key];
+    } else if (key.startsWith('zona-')) {
+      const zoneIndex = parseInt(key.split('-')[1], 10) - 1;
+      object = artwork?.zones?.[zoneIndex]?.audioPath || artwork?.audio?.[key];
+    }
+                  
     if (!object) throw notFound();
-    return HTTP(302, null, { location: await signedObject(object), 'cache-control': 'public, max-age=60' });
+    
+    return HTTP(302, null, { 
+      location: await signedObject(object), 
+      'cache-control': 'public, max-age=60' 
+    });
   }
 
   if (method === 'POST' && ['/api/account/login', '/api/account/register'].includes(path)) {
@@ -325,28 +381,33 @@ if (path === '/api/admin/register' && method === 'POST') {
   // CREAR NUEVA OBRA (Borrador)
   if (path === '/api/admin/works' && method === 'POST') {
     const user = await readUser(request);
-    const body = await readBody(request, 10_000_000); // Límite alto para incluir zonas y metadatos
+    const body = await readBody(request, 10_000_000);
 
     const workId = randomUUID();
     const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
     const imagePath = `works/${workId}/art.${extensions[body.imageType] || 'jpg'}`;
 
-    // Guardar imagen en Storage
     const imageBytes = verifyImage(body.imageType, body.imageData);
     await saveObject(imagePath, imageBytes, body.imageType);
 
-    // Estructura de la obra
     const workData = {
       id: workId,
       creatorId: user.uid,
-      author: text(body.author, 120, 'autor'),
+      title: text(body.title, 120, 'título') || text(body.artist, 120, 'título'),
+      artist: text(body.artist, 120, 'artista') || text(body.author, 120, 'artista'),
+      year: text(body.year, 20, 'año'),
+      technique: text(body.technique, 100, 'técnica'),
+      category: text(body.category, 100, 'categoría'),
       exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
+      intro: text(body.intro, 3000, 'introducción'),
+      summary: text(body.summary, 1000, 'resumen'),
+      aiDescription: text(body.aiDescription, 3000, 'descripción IA'),
       uploadDate: new Date().toISOString(),
       imagePath: imagePath,
-      zones: body.zones || [], // JSON de posiciones
-      aiDescription: '', // Se llenará después con IA
-      narrationAudioPath: '', // Se llenará después con ElevenLabs
-      sceneAudioPath: body.sceneAudioPath || '', // Si ya subió un audio de escena
+      imageType: body.imageType || 'image/jpeg',
+      zones: body.zones || [],
+      narrationAudioPath: '',
+      sceneAudioPath: body.sceneAudioPath || '',
       isPublished: false
     };
 
@@ -371,56 +432,74 @@ if (path === '/api/admin/register' && method === 'POST') {
   }
 
   // GENERAR DESCRIPCIÓN CON IA Y AUDIO CON ELEVENLABS
-  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-narration$/) && method === 'POST') {
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-description$/) && method === 'POST') {
     const user = await readUser(request);
-    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-narration$/)[1];
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-description$/)[1];
     
     const workDoc = await readDoc('works', workId);
     if (!workDoc) throw notFound();
     
-    // Validar permisos
     if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
       throw new HttpError(403, 'No tienes permisos para editar esta obra.');
     }
 
     const work = workDoc.data;
 
-    // 1. Llamar a Gemini para obtener descripción y zonas (si no las tiene)
-    let aiDescription = work.aiDescription;
-    let zones = work.zones;
+    try {
+      const aiResult = await describeImage({ title: work.author || 'Obra sin título', artist: work.exhibitionPlace || 'Desconocido' }, work.imagePath, work.imageType || 'image/jpeg');
+      
+      const aiDescription = aiResult.intro || aiResult.summary || 'Descripción no disponible.';
+      const zones = aiResult.zones || [];
 
-    if (zones.length === 0 || !aiDescription) {
-      try {
-        const aiResult = await describeImage({ title: work.author, artist: 'Desconocido' }, work.imagePath, 'image/jpeg');
-        aiDescription = aiResult.summary || aiResult.intro || 'Descripción no disponible.';
-        zones = aiResult.zones || zones;
-      } catch (error) {
-        throw new HttpError(502, 'Error al generar la descripción con IA.');
-      }
+      const updatedWork = { ...work, aiDescription, zones, updatedAt: new Date().toISOString() };
+      await writeDoc('works', workId, updatedWork);
+
+      return okay({ work: updatedWork });
+    } catch (error) {
+      console.error("❌ FALLO EN VERTEX AI:", error.message);
+      throw new HttpError(502, `Error al generar la descripción con IA: ${error.message}`);
+    }
+  }
+
+  // ==========================================
+  // 🔊 GENERAR SOLO AUDIO CON ELEVENLABS
+  // ==========================================
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-audio$/) && method === 'POST') {
+    const user = await readUser(request);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-audio$/)[1];
+    
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+      throw new HttpError(403, 'No tienes permisos para editar esta obra.');
     }
 
-    // 2. Generar audio con ElevenLabs
-    let narrationAudioPath = work.narrationAudioPath;
-    if (!narrationAudioPath && aiDescription) {
-      try {
-        const audioBytes = await synthesizeElevenLabs(aiDescription);
-        narrationAudioPath = `works/${workId}/audio/narracion.mp3`;
-        await saveObject(narrationAudioPath, audioBytes, 'audio/mpeg');
-      } catch (error) {
-        throw new HttpError(502, 'Error al generar el audio con ElevenLabs.');
-      }
+    const work = workDoc.data;
+
+    if (!work.aiDescription) {
+      throw new HttpError(400, 'Primero debes generar la descripción con IA.');
     }
 
-    // 3. Actualizar Firestore
-    const updatedWork = { ...work, aiDescription, zones, narrationAudioPath };
-    await writeDoc('works', workId, updatedWork);
+    try {
+      // 👇 CAMBIO: synthesizeElevenLabs → synthesizeSpeech
+      const audioBytes = await synthesizeSpeech(work.aiDescription);
+      const narrationAudioPath = `works/${workId}/audio/narracion.mp3`;
+      await saveObject(narrationAudioPath, audioBytes, 'audio/mpeg');
 
-    return okay({ work: updatedWork });
+      const updatedWork = { ...work, narrationAudioPath, updatedAt: new Date().toISOString() };
+      await writeDoc('works', workId, updatedWork);
+
+      return okay({ work: updatedWork });
+    } catch (error) {
+      console.error("❌ FALLO EN CLOUD TTS:", error.message);
+      throw new HttpError(502, `Error al generar el audio con Cloud TTS: ${error.message}`);
+    }
   }
 
   // ACTUALIZAR OBRA (Metadatos o Zonas editadas)
   if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'PUT') {
-    const user = await readUser(request, true);
+    const user = await readUser(request);
     const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
     
     const workDoc = await readDoc('works', workId);
@@ -431,21 +510,38 @@ if (path === '/api/admin/register' && method === 'POST') {
     }
 
     const body = await readBody(request, 10_000_000);
-    const updatedWork = {
-      ...workDoc.data,
-      author: text(body.author, 120, 'autor'),
-      exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
-      zones: body.zones || workDoc.data.zones,
-      aiDescription: body.aiDescription || workDoc.data.aiDescription,
+    const existing = workDoc.data;
+
+    const updated = {
+      ...existing,
+      title: body.title ?? existing.title ?? existing.author,
+      artist: body.artist ?? existing.artist ?? existing.author,
+      year: body.year ?? existing.year,
+      technique: body.technique ?? existing.technique,
+      category: body.category ?? existing.category,
+      exhibitionPlace: body.exhibitionPlace ?? existing.exhibitionPlace,
+      intro: body.intro ?? existing.intro ?? existing.aiDescription,
+      summary: body.summary ?? existing.summary ?? existing.aiDescription,
+      aiDescription: body.aiDescription ?? existing.aiDescription,
+      zones: body.zones ?? existing.zones,
+      narrationAudioPath: body.narrationAudioPath ?? existing.narrationAudioPath,
       updatedAt: new Date().toISOString()
     };
 
-    await writeDoc('works', workId, updatedWork);
-    return okay({ work: updatedWork });
+    if (body.imageData) {
+      const imagePath = `works/${workId}/art.${body.imageType?.split('/')[1] || 'jpg'}`;
+      const imageBuffer = Buffer.from(body.imageData, 'base64');
+      await saveObject(imagePath, imageBuffer, body.imageType || 'image/jpeg');
+      updated.imagePath = imagePath;
+      updated.imageType = body.imageType || 'image/jpeg';
+    }
+
+    await writeDoc('works', workId, updated);
+    return okay({ work: { id: workId, ...updated } });
   }
 
   // ELIMINAR OBRA
-  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'DELETE') {
+    if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'DELETE') {
     const user = await readUser(request, true);
     const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
     
@@ -456,14 +552,197 @@ if (path === '/api/admin/register' && method === 'POST') {
       throw new HttpError(403, 'No tienes permisos para eliminar esta obra.');
     }
 
-    // Eliminar archivos de Storage
+    // 1. Eliminar archivos de Cloud Storage (Imagen y Audio)
     if (workDoc.data.imagePath) await removeObject(workDoc.data.imagePath).catch(() => {});
     if (workDoc.data.narrationAudioPath) await removeObject(workDoc.data.narrationAudioPath).catch(() => {});
 
-    // Eliminar de Firestore
-    await call('Firestore', `${endpoint}/works/${encodeURIComponent(workId)}`, { method: 'DELETE' });
+    // 2. Eliminar el documento de Firestore usando la nueva función
+    await deleteDoc('works', workId);
 
     return okay({ message: 'Obra eliminada correctamente' });
+  }
+if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-audio$/) && method === 'POST') {
+  const user = await readUser(request);
+  const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-audio$/)[1];
+  
+  const workDoc = await readDoc('works', workId);
+  if (!workDoc) throw notFound();
+  
+  if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) {
+    throw new HttpError(403, 'No tienes permisos para editar esta obra.');
+  }
+
+  const body = await readBody(request, 15_000_000); // 15MB máximo
+  
+  if (!body.audioData) {
+    throw new HttpError(400, 'Faltan datos de audio.');
+  }
+
+  try {
+    const audioBuffer = Buffer.from(body.audioData, 'base64');
+    const ext = (body.audioType || 'audio/mpeg').split('/')[1] || 'mp3';
+    const narrationAudioPath = `works/${workId}/audio/narracion.${ext}`;
+    
+    await saveObject(narrationAudioPath, audioBuffer, body.audioType || 'audio/mpeg');
+    
+    const updatedWork = { 
+      ...workDoc.data, 
+      narrationAudioPath, 
+      updatedAt: new Date().toISOString() 
+    };
+    await writeDoc('works', workId, updatedWork);
+    
+    console.log(`✅ Audio subido: ${Math.round(audioBuffer.length / 1024)} KB`);
+    return okay({ work: { id: workId, ...updatedWork } });
+    
+  } catch (error) {
+    console.error("❌ FALLO AL SUBIR AUDIO:", error.message);
+    throw new HttpError(502, `Error al subir el audio: ${error.message}`);
+  }
+}
+  // ==========================================
+  // 🌿 SUBIR AUDIO AMBIENTAL
+  // ==========================================
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-ambience$/) && method === 'POST') {
+    const user = await readUser(request);
+    const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-ambience$/)[1];
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) throw new HttpError(403, 'No tienes permisos.');
+
+    const body = await readBody(request, 15_000_000);
+    if (!body.audioData) throw new HttpError(400, 'Faltan datos de audio.');
+
+    const audioBuffer = Buffer.from(body.audioData, 'base64');
+    const ext = (body.audioType || 'audio/mpeg').split('/')[1] || 'mp3';
+    const ambiencePath = `works/${workId}/audio/ambiente.${ext}`;
+    
+    await saveObject(ambiencePath, audioBuffer, body.audioType || 'audio/mpeg');
+    
+    const updatedWork = { ...workDoc.data, ambiencePath, updatedAt: new Date().toISOString() };
+    await writeDoc('works', workId, updatedWork);
+    
+    return okay({ work: { id: workId, ...updatedWork } });
+  }
+
+  // ==========================================
+  // 🎵 SUBIR AUDIO PARA UNA ZONA ESPECÍFICA
+  // ==========================================
+  if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/zones\/(\d+)\/upload-audio$/) && method === 'POST') {
+    const user = await readUser(request);
+    const [, workId, zoneIndexStr] = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/zones\/(\d+)\/upload-audio$/);
+    const zoneIndex = parseInt(zoneIndexStr, 10);
+    
+    const workDoc = await readDoc('works', workId);
+    if (!workDoc) throw notFound();
+    if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) throw new HttpError(403, 'No tienes permisos.');
+
+    const body = await readBody(request, 15_000_000);
+    if (!body.audioData) throw new HttpError(400, 'Faltan datos de audio.');
+
+    const zones = workDoc.data.zones || [];
+    if (!zones[zoneIndex]) throw new HttpError(400, 'Índice de zona inválido.');
+
+    const audioBuffer = Buffer.from(body.audioData, 'base64');
+    const ext = (body.audioType || 'audio/mpeg').split('/')[1] || 'mp3';
+    const zoneAudioPath = `works/${workId}/audio/zona-${zoneIndex + 1}.${ext}`;
+    
+    await saveObject(zoneAudioPath, audioBuffer, body.audioType || 'audio/mpeg');
+    
+    // Actualizar el array de zonas con la nueva ruta de audio
+    zones[zoneIndex] = { ...zones[zoneIndex], audioPath: zoneAudioPath };
+    
+    const updatedWork = { ...workDoc.data, zones, updatedAt: new Date().toISOString() };
+    await writeDoc('works', workId, updatedWork);
+    
+    return okay({ work: { id: workId, ...updatedWork } });
+  }
+  // ==========================================
+// 🤖 GENERAR INTRODUCCIÓN CON IA
+// ==========================================
+if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-intro$/) && method === 'POST') {
+  const user = await readUser(request);
+  const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-intro$/)[1];
+  const workDoc = await readDoc('works', workId);
+  if (!workDoc) throw notFound();
+  if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) throw new HttpError(403, 'No tienes permisos.');
+
+  const work = workDoc.data;
+
+  try {
+    const aiResult = await describeImage(
+      { title: work.title || 'Obra sin título', artist: work.artist || 'Desconocido' },
+      work.imagePath,
+      work.imageType || 'image/jpeg'
+    );
+    
+    const intro = aiResult.intro || aiResult.summary || 'Descripción no disponible.';
+    const updatedWork = { ...work, intro, updatedAt: new Date().toISOString() };
+    await writeDoc('works', workId, updatedWork);
+
+    return okay({ work: { id: workId, ...updatedWork } });
+  } catch (error) {
+    console.error("❌ FALLO EN IA:", error.message);
+    throw new HttpError(502, `Error al generar la introducción: ${error.message}`);
+  }
+}
+
+// ==========================================
+// 🔊 GENERAR AUDIO TTS DE LA INTRODUCCIÓN
+// ==========================================
+if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-intro-audio$/) && method === 'POST') {
+  const user = await readUser(request);
+  const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/generate-intro-audio$/)[1];
+  const workDoc = await readDoc('works', workId);
+  if (!workDoc) throw notFound();
+  if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) throw new HttpError(403, 'No tienes permisos.');
+
+  const body = await readBody(request, 50_000);
+  if (!body.introText) throw new HttpError(400, 'Falta el texto de la introducción.');
+
+  try {
+    const audioBytes = await synthesizeSpeech(body.introText);
+    const introAudioPath = `works/${workId}/audio/introduccion.mp3`;
+    await saveObject(introAudioPath, audioBytes, 'audio/mpeg');
+
+    const updatedWork = { ...workDoc.data, introAudioPath, updatedAt: new Date().toISOString() };
+    await writeDoc('works', workId, updatedWork);
+
+    return okay({ work: { id: workId, ...updatedWork } });
+  } catch (error) {
+    console.error("❌ FALLO EN TTS:", error.message);
+    throw new HttpError(502, `Error al generar el audio: ${error.message}`);
+  }
+}
+
+// ==========================================
+// 📤 SUBIR AUDIO DE INTRODUCCIÓN MANUAL
+// ==========================================
+if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-intro-audio$/) && method === 'POST') {
+  const user = await readUser(request);
+  const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})\/upload-intro-audio$/)[1];
+  const workDoc = await readDoc('works', workId);
+  if (!workDoc) throw notFound();
+  if (user.role !== 'administrador' && workDoc.data.creatorId !== user.uid) throw new HttpError(403, 'No tienes permisos.');
+
+  const body = await readBody(request, 15_000_000);
+  if (!body.audioData) throw new HttpError(400, 'Faltan datos de audio.');
+
+  try {
+    const audioBuffer = Buffer.from(body.audioData, 'base64');
+    const ext = (body.audioType || 'audio/mpeg').split('/')[1] || 'mp3';
+    const introAudioPath = `works/${workId}/audio/introduccion.${ext}`;
+    
+    await saveObject(introAudioPath, audioBuffer, body.audioType || 'audio/mpeg');
+    
+    const updatedWork = { ...workDoc.data, introAudioPath, updatedAt: new Date().toISOString() };
+    await writeDoc('works', workId, updatedWork);
+    
+    return okay({ work: { id: workId, ...updatedWork } });
+  } catch (error) {
+    console.error("❌ FALLO AL SUBIR AUDIO:", error.message);
+    throw new HttpError(502, `Error al subir el audio: ${error.message}`);
+  }
 }
   throw notFound();
 }
