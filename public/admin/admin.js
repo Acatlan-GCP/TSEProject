@@ -186,6 +186,7 @@ async function openEditor(workId) {
 
   showView('view-editor');
   renderZones();
+  document.getElementById('work-image').value = '';
 }
 
 document.getElementById('btn-back').addEventListener('click', loadDashboard);
@@ -517,6 +518,7 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
     const imageInput = document.getElementById('work-image');
     let imageData = null, imageType = null;
 
+    // 1. Solo procesamos la imagen si el usuario seleccionó un archivo nuevo
     if (imageInput.files[0]) {
       const file = imageInput.files[0];
       imageType = file.type;
@@ -526,6 +528,11 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
         reader.readAsDataURL(file);
       });
       imageData = base64;
+    } 
+    // 2. 👇 AQUÍ ESTÁ LA CLAVE: Solo lanzamos error si es una obra NUEVA y no hay imagen
+    else if (!currentWork) {
+      showError('work-error', 'Debes seleccionar una imagen para crear una obra nueva.');
+      return;
     }
 
     const body = {
@@ -534,13 +541,16 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
       zones: zones,
       aiDescription: document.getElementById('work-description').value,
       imageType,
-      imageData
+      imageData // Si es null, el backend ignorará este campo y conservará la imagen anterior
     };
 
     if (currentWork) {
       await apiCall(`/api/admin/works/${currentWork.id}`, { method: 'PUT', body });
       show(document.getElementById('work-success'), false);
       document.getElementById('work-success').textContent = '✅ Obra actualizada';
+      
+      // 👇 Limpiar el input de archivo para que no se vuelva a enviar por accidente en el futuro
+      imageInput.value = ''; 
     } else {
       const data = await apiCall('/api/admin/works', { method: 'POST', body });
       currentWork = data.work;

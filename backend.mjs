@@ -478,7 +478,7 @@ if (path === '/api/admin/register' && method === 'POST') {
       updatedAt: new Date().toISOString()
     };
 
-    // 👇 Solo subir imagen nueva si viene en el body
+    // 👇 Solo subir imagen nueva si viene en el body (si imageData existe)
     if (body.imageData) {
       const imagePath = `works/${workId}/art.${body.imageType?.split('/')[1] || 'jpg'}`;
       const imageBuffer = Buffer.from(body.imageData, 'base64');
