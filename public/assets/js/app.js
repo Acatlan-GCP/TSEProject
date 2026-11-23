@@ -15,6 +15,69 @@ let catalog = [...demo];
 let selected = 0;
 let services = { cloud: false };
 
+async function showAdminAccess() {
+  const tokens = [];
+
+  if (session.token) tokens.push(session.token);
+
+  try {
+    const adminToken = localStorage.getItem('admin_token');
+    if (adminToken && !tokens.includes(adminToken)) {
+      tokens.push(adminToken);
+    }
+  } catch {}
+
+  if (!tokens.length) return;
+
+  let profile = null;
+
+  for (const token of tokens) {
+    try {
+      const response = await fetch('/api/admin/me', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      profile = data.user;
+      break;
+    } catch {
+      // Si falla una sesión, se intenta con el siguiente token.
+    }
+  }
+
+  if (!profile) return;
+
+  const allowedRoles = ['administrador', 'creador'];
+
+  if (!allowedRoles.includes(profile.role)) return;
+
+  const link = document.createElement('a');
+  link.href = '/admin/';
+  link.className = 'button access-button admin-panel-link';
+  link.textContent = 'Panel de administración';
+  link.setAttribute('aria-label', 'Ir al panel de administración');
+
+  const accessMenu = document.querySelector('.access-menu');
+
+  if (accessMenu) {
+    accessMenu.append(link);
+    return;
+  }
+
+  const navigation = document.querySelector(
+    'nav[aria-label="Navegación principal"]'
+  );
+
+  if (navigation) {
+    link.classList.remove('button', 'access-button');
+    navigation.append(link);
+  }
+}
+
 function setPreferences(values = {}) {
   const input = values ?? {};
   preferences = {
@@ -676,6 +739,7 @@ async function initialize() {
   });
   const catalogPromise = loadCatalog();
   await Promise.allSettled([configPromise, catalogPromise]);
+  await showAdminAccess();
   if (page === 'inicio') fillHome();
   if (page === 'galeria') fillGallery();
   if (page === 'buscar') fillSearch();

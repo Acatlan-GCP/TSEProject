@@ -1450,3 +1450,22 @@ body[data-page="galeria"] .catalog-controls .button {
     font-size: 1.05rem;
   }
 }
+
+/* Acceso al panel administrativo */
+.admin-panel-link {
+  border-color: var(--accent);
+  color: var(--ink);
+}
+
+.admin-panel-link:hover,
+.admin-panel-link:focus-visible {
+  background: var(--accent);
+  color: var(--deep);
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Acceso desde la navegación */
+.top nav .admin-panel-link {
+  font-weight: 700;
+}
