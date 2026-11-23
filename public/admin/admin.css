@@ -514,100 +514,138 @@ button:disabled {
   outline-offset: 4px;
 }
 
-input:focus-visible,
-textarea:focus-visible {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(212, 167, 44, .13);
+.editor-actions { margin: 20px 0; }
+.editor-form { margin-top: 20px; }
+
+.zone-box.selected {
+  border-color: #0066ff;
+  background: rgba(0, 102, 255, 0.2);
+  border-style: solid;
 }
 
-button:focus-visible {
-  outline-offset: 4px;
+.zone-label {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  background: #ff4444;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
-/* =========================================
-   DISEÑO RESPONSIVO
-   ========================================= */
-
-@media (max-width: 650px) {
-  body {
-    padding: .7rem;
-  }
-
-  .container {
-    min-height: calc(100vh - 1.4rem);
-    padding: 1.1rem;
-    border-radius: .9rem;
-  }
-
-  h1 {
-    margin-bottom: 1.4rem;
-  }
-
-  #view-auth {
-    margin: 1.2rem auto;
-    padding: 1rem;
-  }
-
-  .dashboard-header {
-    align-items: stretch;
-  }
-
-  .dashboard-header > div {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .dashboard-header button {
-    width: 100%;
-  }
-
-  .editor-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-  }
-
-  .editor-actions button {
-    width: 100%;
-  }
-
-  .editor-form > .btn-primary {
-    width: 100%;
-  }
-
-  .image-editor {
-    width: 100%;
-  }
-
-  .image-editor img {
-    width: 100%;
-  }
+.zone-box.selected .zone-label {
+  background: #0066ff;
 }
 
-@media (max-width: 380px) {
-  .auth-tabs {
-    grid-template-columns: 1fr;
-  }
-
-  .dashboard-header > div {
-    grid-template-columns: 1fr;
-  }
-
-  .work-actions {
-    flex-direction: column;
-  }
+/* Handles de redimensionamiento */
+.resize-handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  background: white;
+  border: 2px solid #0066ff;
+  border-radius: 50%;
+  cursor: nwse-resize;
+  z-index: 10;
 }
 
-/* =========================================
-   MOVIMIENTO REDUCIDO
-   ========================================= */
+.resize-handle.tl { top: -6px; left: -6px; cursor: nwse-resize; }
+.resize-handle.tr { top: -6px; right: -6px; cursor: nesw-resize; }
+.resize-handle.bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.resize-handle.br { bottom: -6px; right: -6px; cursor: nwse-resize; }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    scroll-behavior: auto !important;
-    animation-duration: .01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: .01ms !important;
-  }
+/* Botón eliminar zona */
+.zone-delete {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  width: 22px;
+  height: 22px;
+  background: #ff4444;
+  color: white;
+  border: 2px solid white;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  z-index: 11;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.zone-delete:hover {
+  background: #cc0000;
+  transform: scale(1.1);
+}
+
+/* Botón agregar zona */
+.btn-add-zone {
+  display: inline-block;
+  margin: 10px 5px;
+  padding: 8px 16px;
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.btn-add-zone:hover {
+  background: #218838;
+}
+
+/* Lista de zonas */
+.zones-list {
+  margin-top: 20px;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.zone-item {
+  padding: 10px;
+  margin: 8px 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.zone-item:hover {
+  border-color: #0066ff;
+  background: #f0f7ff;
+}
+
+.zone-item input, .zone-item textarea {
+  flex: 1;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.zone-item .btn-delete-zone {
+  padding: 6px 12px;
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.zone-item .btn-delete-zone:hover {
+  background: #c82333;
 }

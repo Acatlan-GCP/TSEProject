@@ -108,6 +108,17 @@ async function loadDashboard() {
     document.getElementById('user-display-name').textContent = currentUser.username || currentUser.realName;
     document.getElementById('user-role').textContent = currentUser.role;
 
+    const header = document.querySelector('.dashboard-header') || document.querySelector('header');
+    if (header && !document.getElementById('btn-to-gallery')) {
+      const galleryBtn = document.createElement('a');
+      galleryBtn.id = 'btn-to-gallery';
+      galleryBtn.href = '/galeria/';
+      galleryBtn.className = 'button secondary';
+      galleryBtn.textContent = '🎨 Ver Galería';
+      galleryBtn.style.marginLeft = 'auto'; // Lo empuja a la derecha
+      header.appendChild(galleryBtn);
+    }
+
     const worksData = await apiCall('/api/admin/works');
     renderWorks(worksData.works || []);
     showView('view-dashboard');
@@ -164,21 +175,31 @@ async function openEditor(workId) {
   zones = [];
   document.getElementById('form-work').reset();
   document.getElementById('image-editor').hidden = true;
-  document.getElementById('zones-container').innerHTML = '';
   document.getElementById('zones-list').innerHTML = '';
 
   if (workId) {
-    // Cargar obra existente (reutilizamos el endpoint público de works)
     const data = await apiCall(`/api/admin/works/${workId}`);
     currentWork = data.work;
     document.getElementById('editor-title').textContent = 'Editar obra';
-    document.getElementById('work-author').value = currentWork.author || '';
+    
+    // Llenar campos básicos
+    document.getElementById('work-title').value = currentWork.title || currentWork.author || '';
+    document.getElementById('work-artist').value = currentWork.artist || currentWork.author || '';
+    document.getElementById('work-year').value = currentWork.year || '';
+    document.getElementById('work-technique').value = currentWork.technique || '';
+    document.getElementById('work-category').value = currentWork.category || '';
     document.getElementById('work-exhibition').value = currentWork.exhibitionPlace || '';
-    document.getElementById('work-description').value = currentWork.aiDescription || '';
+    
+    // 👇 Campo de introducción
+    document.getElementById('work-intro').value = currentWork.intro || currentWork.aiDescription || '';
+    
     zones = currentWork.zones || [];
     if (currentWork.imagePath) {
       await loadImagePreview(`/api/media/${workId}/imagen`);
     }
+    
+    // 👇 Actualizar reproductor de intro si existe
+    updateIntroPlayer();
   } else {
     currentWork = null;
     document.getElementById('editor-title').textContent = 'Nueva obra';
@@ -186,6 +207,7 @@ async function openEditor(workId) {
 
   showView('view-editor');
   renderZones();
+  document.getElementById('work-image').value = '';
 }
 
 document.getElementById('btn-back').addEventListener('click', loadDashboard);
@@ -207,116 +229,259 @@ async function loadImagePreview(src, mimeType = 'image/jpeg') {
   await new Promise(r => img.onload = r);
   renderZones();
 }
+let selectedZoneIndex = null;
 
 // Renderizar zonas sobre la imagen
 function renderZones() {
-  const container = document.getElementById('zones-container');
-  const list = document.getElementById('zones-list');
-  container.innerHTML = '';
-  list.innerHTML = '';
-
-  zones.forEach((zone, idx) => {
-    // Caja sobre la imagen
+  const container = document.getElementById('image-editor');
+  if (!container) return;
+  
+  // Limpiar zonas anteriores (pero mantener la imagen)
+  container.querySelectorAll('.zone-box').forEach(el => el.remove());
+  
+  const img = container.querySelector('img');
+  if (!img) return;
+  
+  const imgWidth = img.clientWidth;
+  const imgHeight = img.clientHeight;
+  
+  zones.forEach((zone, index) => {
+    const [left, top, width, height] = zone.bounds;
+    
     const box = document.createElement('div');
-    box.className = 'zone-box';
-    box.style.left = `${zone.bounds[0] * 100}%`;
-    box.style.top = `${zone.bounds[1] * 100}%`;
-    box.style.width = `${zone.bounds[2] * 100}%`;
-    box.style.height = `${zone.bounds[3] * 100}%`;
-    box.title = zone.label;
-    box.dataset.idx = idx;
-    makeDraggable(box, idx);
-    container.appendChild(box);
-
-    // Lista editable
-    const item = document.createElement('div');
-    item.className = 'zone-item';
-    item.innerHTML = `
-      <strong>Zona ${idx + 1}: ${zone.label || 'Sin nombre'}</strong>
-      <div><small>Posición: [${zone.bounds.map(b => b.toFixed(2)).join(', ')}]</small></div>
-      <textarea placeholder="Descripción de la zona..." data-zone-idx="${idx}">${zone.text || ''}</textarea>
-    `;
-    list.appendChild(item);
-  });
-
-  // Listener para actualizar texto de zona
-  list.querySelectorAll('textarea').forEach(ta => {
-    ta.addEventListener('input', (e) => {
-      const idx = parseInt(e.target.dataset.zoneIdx);
-      zones[idx].text = e.target.value;
-    });
-  });
-}
-
-// Drag básico para mover zonas
-function makeDraggable(box, idx) {
-  let isDragging = false, startX, startY, startLeft, startTop;
-  const img = document.getElementById('preview-image');
-
-  box.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    startLeft = parseFloat(box.style.left);
-    startTop = parseFloat(box.style.top);
-    e.preventDefault();
-  });
-
-  document.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
-    const dx = ((e.clientX - startX) / img.offsetWidth) * 100;
-    const dy = ((e.clientY - startY) / img.offsetHeight) * 100;
-    let newLeft = Math.max(0, Math.min(100 - parseFloat(box.style.width), startLeft + dx));
-    let newTop = Math.max(0, Math.min(100 - parseFloat(box.style.height), startTop + dy));
-    box.style.left = `${newLeft}%`;
-    box.style.top = `${newTop}%`;
-    zones[idx].bounds[0] = newLeft / 100;
-    zones[idx].bounds[1] = newTop / 100;
-  });
-
-  document.addEventListener('mouseup', () => {
-    if (isDragging) {
-      isDragging = false;
-      renderZones(); // Actualizar lista con nuevas coords
+    box.className = 'zone-box' + (selectedZoneIndex === index ? ' selected' : '');
+    box.style.left = `${left * imgWidth}px`;
+    box.style.top = `${top * imgHeight}px`;
+    box.style.width = `${width * imgWidth}px`;
+    box.style.height = `${height * imgHeight}px`;
+    box.dataset.index = index;
+    
+    // Etiqueta
+    const label = document.createElement('div');
+    label.className = 'zone-label';
+    label.textContent = zone.label || `Zona ${index + 1}`;
+    box.appendChild(label);
+    
+    // Botón eliminar (solo si está seleccionada)
+    if (selectedZoneIndex === index) {
+      const deleteBtn = document.createElement('div');
+      deleteBtn.className = 'zone-delete';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.title = 'Eliminar zona';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        deleteZone(index);
+      });
+      box.appendChild(deleteBtn);
+      
+      // Handles de redimensionamiento
+      ['tl', 'tr', 'bl', 'br'].forEach(corner => {
+        const handle = document.createElement('div');
+        handle.className = `resize-handle ${corner}`;
+        handle.addEventListener('mousedown', (e) => startResize(e, index, corner));
+        box.appendChild(handle);
+      });
     }
+    
+    // Eventos de interacción
+    box.addEventListener('mousedown', (e) => startDrag(e, index));
+    box.addEventListener('click', (e) => {
+      e.stopPropagation();
+      selectZone(index);
+    });
+    
+    container.appendChild(box);
   });
+  
+  // Renderizar lista de zonas debajo
+  renderZonesList();
 }
 
-// Generar IA
-document.getElementById('btn-generate-ai').addEventListener('click', async () => {
-  if (!currentWork) {
-    showError('work-error', 'Primero guarda la obra como borrador.');
+function selectZone(index) {
+  selectedZoneIndex = (selectedZoneIndex === index) ? null : index;
+  renderZones();
+}
+
+function deleteZone(index) {
+  if (!confirm(`¿Eliminar "${zones[index].label || 'Zona ' + (index + 1)}"?`)) return;
+  zones.splice(index, 1);
+  selectedZoneIndex = null;
+  renderZones();
+}
+
+
+
+function addZone() {
+  const newZone = {
+    label: `Zona ${zones.length + 1}`,
+    bounds: [0.1, 0.1, 0.3, 0.3], // Posición inicial: esquina superior izquierda
+    text: 'Descripción de la nueva zona'
+  };
+  zones.push(newZone);
+  selectedZoneIndex = zones.length - 1;
+  renderZones();
+}
+
+function startDrag(e, index) {
+  if (e.target.classList.contains('resize-handle') || e.target.classList.contains('zone-delete')) return;
+  
+  e.preventDefault();
+  const container = document.getElementById('image-editor');
+  const img = container.querySelector('img');
+  const imgWidth = img.clientWidth;
+  const imgHeight = img.clientHeight;
+  
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const initialBounds = [...zones[index].bounds];
+  
+  function onMouseMove(e) {
+    const dx = (e.clientX - startX) / imgWidth;
+    const dy = (e.clientY - startY) / imgHeight;
+    
+    let [left, top, width, height] = initialBounds;
+    left = Math.max(0, Math.min(1 - width, left + dx));
+    top = Math.max(0, Math.min(1 - height, top + dy));
+    
+    zones[index].bounds = [
+      parseFloat(left.toFixed(4)),
+      parseFloat(top.toFixed(4)),
+      width,
+      height
+    ];
+    renderZones();
+  }
+  
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function startResize(e, index, corner) {
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const container = document.getElementById('image-editor');
+  const img = container.querySelector('img');
+  const imgRect = img.getBoundingClientRect();
+  const imgWidth = img.clientWidth;
+  const imgHeight = img.clientHeight;
+  
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const initialBounds = [...zones[index].bounds];
+  
+  function onMouseMove(e) {
+    const dx = (e.clientX - startX) / imgWidth;
+    const dy = (e.clientY - startY) / imgHeight;
+    
+    let [left, top, width, height] = initialBounds;
+    
+    switch (corner) {
+      case 'br':
+        width = Math.max(0.05, Math.min(1 - left, width + dx));
+        height = Math.max(0.05, Math.min(1 - top, height + dy));
+        break;
+      case 'bl':
+        const newLeft = Math.max(0, Math.min(left + width - 0.05, left + dx));
+        width = width - (newLeft - left);
+        left = newLeft;
+        height = Math.max(0.05, Math.min(1 - top, height + dy));
+        break;
+      case 'tr':
+        width = Math.max(0.05, Math.min(1 - left, width + dx));
+        const newTop = Math.max(0, Math.min(top + height - 0.05, top + dy));
+        height = height - (newTop - top);
+        top = newTop;
+        break;
+      case 'tl':
+        const newLeftTl = Math.max(0, Math.min(left + width - 0.05, left + dx));
+        const newTopTl = Math.max(0, Math.min(top + height - 0.05, top + dy));
+        width = width - (newLeftTl - left);
+        height = height - (newTopTl - top);
+        left = newLeftTl;
+        top = newTopTl;
+        break;
+    }
+    
+    zones[index].bounds = [
+      parseFloat(left.toFixed(4)),
+      parseFloat(top.toFixed(4)),
+      parseFloat(width.toFixed(4)),
+      parseFloat(height.toFixed(4))
+    ];
+    renderZones();
+  }
+  
+  function onMouseUp() {
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  }
+  
+  document.addEventListener('mousemove', onMouseMove);
+  document.addEventListener('mouseup', onMouseUp);
+}
+
+function renderZonesList() {
+  const listContainer = document.getElementById('zones-list');
+  if (!listContainer) return;
+  
+  if (zones.length === 0) {
+    listContainer.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay zonas. Haz clic en "➕ Agregar zona" para crear una.</p>';
     return;
   }
-  try {
-    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-narration`, { method: 'POST' });
-    currentWork = data.work;
-    document.getElementById('work-description').value = currentWork.aiDescription || '';
-    zones = currentWork.zones || [];
-    renderZones();
-    showError('work-success', '✅ Descripción y zonas generadas con IA');
-    document.getElementById('work-success').textContent = '✅ Descripción y zonas generadas';
-    show(document.getElementById('work-success'), false);
-  } catch (err) {
-    showError('work-error', err.message);
+  
+  listContainer.innerHTML = zones.map((zone, index) => `
+    <div class="zone-item" data-index="${index}">
+      <input type="text" value="${zone.label || ''}" 
+             placeholder="Nombre" 
+             onchange="updateZoneLabel(${index}, this.value)"
+             style="flex: 0 0 150px;">
+      <textarea placeholder="Descripción" 
+                onchange="updateZoneText(${index}, this.value)"
+                rows="2"
+                style="flex: 1;">${zone.text || ''}</textarea>
+      
+      <!-- 👇 NUEVO: Input para audio de zona -->
+      <div style="display: flex; flex-direction: column; gap: 5px; min-width: 180px;">
+        <input type="file" id="zone-audio-${index}" accept="audio/*" style="font-size: 11px;">
+        <button type="button" onclick="uploadZoneAudio(${index})" style="padding: 4px 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+          🎵 Audio zona
+        </button>
+        ${zone.audioPath ? '<small style="color: green; font-size: 11px;">✅ Audio guardado</small>' : ''}
+      </div>
+
+      <button class="btn-delete-zone" onclick="deleteZone(${index})" style="padding: 6px 12px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
+    </div>
+  `).join('');
+}
+
+// ==========================================
+// ACTUALIZAR DATOS DE ZONA
+// ==========================================
+function updateZoneLabel(index, value) {
+  zones[index].label = value;
+  renderZones();
+}
+
+function updateZoneText(index, value) {
+  zones[index].text = value;
+}
+
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.zone-box') && !e.target.closest('.zones-list') && !e.target.closest('.btn-add-zone')) {
+    if (selectedZoneIndex !== null) {
+      selectedZoneIndex = null;
+      renderZones();
+    }
   }
 });
 
-// Generar audio ElevenLabs
-document.getElementById('btn-generate-audio').addEventListener('click', async () => {
-  if (!currentWork) {
-    showError('work-error', 'Primero guarda la obra como borrador.');
-    return;
-  }
-  try {
-    const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-narration`, { method: 'POST' });
-    currentWork = data.work;
-    show(document.getElementById('work-success'), false);
-    document.getElementById('work-success').textContent = '✅ Audio generado con ElevenLabs';
-  } catch (err) {
-    showError('work-error', err.message);
-  }
-});
 
 // Guardar obra
 document.getElementById('form-work').addEventListener('submit', async (e) => {
@@ -337,13 +502,20 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
         reader.readAsDataURL(file);
       });
       imageData = base64;
+    } else if (!currentWork) {
+      showError('work-error', 'Debes seleccionar una imagen para crear una obra nueva.');
+      return;
     }
 
     const body = {
-      author: document.getElementById('work-author').value,
+      title: document.getElementById('work-title').value,
+      artist: document.getElementById('work-artist').value,
+      year: document.getElementById('work-year').value,
+      technique: document.getElementById('work-technique').value,
+      category: document.getElementById('work-category').value,
       exhibitionPlace: document.getElementById('work-exhibition').value,
+      intro: document.getElementById('work-intro').value, // 👇 Campo de introducción
       zones: zones,
-      aiDescription: document.getElementById('work-description').value,
       imageType,
       imageData
     };
@@ -352,6 +524,7 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
       await apiCall(`/api/admin/works/${currentWork.id}`, { method: 'PUT', body });
       show(document.getElementById('work-success'), false);
       document.getElementById('work-success').textContent = '✅ Obra actualizada';
+      imageInput.value = '';
     } else {
       const data = await apiCall('/api/admin/works', { method: 'POST', body });
       currentWork = data.work;
@@ -362,6 +535,336 @@ document.getElementById('form-work').addEventListener('submit', async (e) => {
     showError('work-error', err.message);
   }
 });
+
+function updateAudioPlayer() {
+  const container = document.getElementById('audio-player-container');
+  const player = document.getElementById('audio-player');
+  
+  if (!container || !player || !currentWork) return;
+  
+  if (currentWork.narrationAudioPath) {
+    // Construir URL firmada para reproducir
+    player.src = `/api/media/${currentWork.id}/narracion`;
+    container.style.display = 'block';
+  } else {
+    player.src = '';
+    container.style.display = 'none';
+  }
+}
+
+// ==========================================
+// SUBIR AUDIO PROPIO
+// ==========================================
+document.getElementById('btn-upload-audio')?.addEventListener('click', async () => {
+  if (!currentWork) {
+    showError('audio-error', 'Primero guarda la obra como borrador.');
+    return;
+  }
+
+  const audioInput = document.getElementById('work-audio');
+  const file = audioInput.files[0];
+
+  if (!file) {
+    showError('audio-error', 'Selecciona un archivo de audio primero.');
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    showError('audio-error', 'El audio no puede superar los 10MB.');
+    return;
+  }
+
+  clearError('audio-error');
+  document.getElementById('audio-success').style.display = 'none';
+
+  try {
+    const uploadBtn = document.getElementById('btn-upload-audio');
+    uploadBtn.disabled = true;
+    uploadBtn.textContent = '⏳ Subiendo...';
+
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-audio`, {
+      method: 'POST',
+      body: JSON.stringify({
+        audioData: base64,
+        audioType: file.type || 'audio/mpeg'
+      })
+    });
+
+    currentWork = data.work;
+    audioInput.value = '';
+    
+    const successDiv = document.getElementById('audio-success');
+    successDiv.textContent = '✅ Audio subido correctamente';
+    successDiv.style.display = 'block';
+    
+    updateAudioPlayer();
+
+  } catch (err) {
+    showError('audio-error', err.message);
+  } finally {
+    const uploadBtn = document.getElementById('btn-upload-audio');
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = '📤 Subir audio';
+  }
+});
+
+// Llamar a updateAudioPlayer cuando se abre el editor
+const originalOpenEditor = window.openEditor;
+window.openEditor = async function(workId) {
+  await originalOpenEditor?.(workId);
+  updateAudioPlayer();
+};
+
+// ==========================================
+// SUBIR AUDIO AMBIENTAL
+// ==========================================
+document.getElementById('btn-upload-ambience')?.addEventListener('click', async () => {
+  if (!currentWork) return showError('audio-error', 'Primero guarda la obra como borrador.');
+  const file = document.getElementById('work-ambience').files[0];
+  if (!file) return showError('audio-error', 'Selecciona un archivo de audio ambiental.');
+  if (file.size > 15 * 1024 * 1024) return showError('audio-error', 'El audio no puede superar los 15MB.');
+
+  try {
+    const btn = document.getElementById('btn-upload-ambience');
+    btn.disabled = true; btn.textContent = '⏳ Subiendo...';
+    
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-ambience`, {
+      method: 'POST',
+      body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+    });
+
+    currentWork = data.work;
+    document.getElementById('work-ambience').value = '';
+    showSuccess('✅ Audio ambiental subido correctamente');
+  } catch (err) {
+    showError('audio-error', err.message);
+  } finally {
+    const btn = document.getElementById('btn-upload-ambience');
+    btn.disabled = false; btn.textContent = '📤 Subir ambiente';
+  }
+});
+
+// ==========================================
+// SUBIR AUDIO DE UNA ZONA ESPECÍFICA
+// ==========================================
+window.uploadZoneAudio = async (index) => {
+  if (!currentWork) return alert('Primero guarda la obra como borrador.');
+  const fileInput = document.getElementById(`zone-audio-${index}`);
+  const file = fileInput.files[0];
+  if (!file) return alert('Selecciona un archivo de audio para esta zona.');
+  if (file.size > 15 * 1024 * 1024) return alert('El audio no puede superar los 15MB.');
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const data = await apiCall(`/api/admin/works/${currentWork.id}/zones/${index}/upload-audio`, {
+      method: 'POST',
+      body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+    });
+
+    currentWork = data.work;
+    fileInput.value = '';
+    renderZonesList(); // Refrescar para mostrar el check verde
+    showSuccess('✅ Audio de la zona subido correctamente');
+  } catch (err) {
+    alert('Error: ' + err.message);
+  }
+};
+
+// Helper para mensajes de éxito
+function showSuccess(msg) {
+  const el = document.getElementById('audio-success');
+  el.textContent = msg;
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ==========================================
+// GENERAR INTRODUCCIÓN CON IA
+// ==========================================
+const btnGenerateIntroAI = document.getElementById('btn-generate-intro-ai');
+if (btnGenerateIntroAI) {
+  btnGenerateIntroAI.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    try {
+      btnGenerateIntroAI.disabled = true;
+      btnGenerateIntroAI.textContent = '⏳ Generando...';
+      
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-intro`, { method: 'POST' });
+      currentWork = data.work;
+      
+      document.getElementById('work-intro').value = currentWork.intro || '';
+      showSuccess('intro-success', '✅ Introducción generada con IA');
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnGenerateIntroAI.disabled = false;
+      btnGenerateIntroAI.textContent = '🤖 Generar con IA';
+    }
+  });
+}
+
+// ==========================================
+// GENERAR AUDIO TTS DE LA INTRODUCCIÓN
+// ==========================================
+const btnGenerateIntroTTS = document.getElementById('btn-generate-intro-tts');
+if (btnGenerateIntroTTS) {
+  btnGenerateIntroTTS.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    const introText = document.getElementById('work-intro').value.trim();
+    if (!introText) return showError('intro-error', 'Primero escribe o genera la introducción.');
+    
+    try {
+      btnGenerateIntroTTS.disabled = true;
+      btnGenerateIntroTTS.textContent = '⏳ Generando audio...';
+      
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/generate-intro-audio`, {
+        method: 'POST',
+        body: { introText }
+      });
+      
+      currentWork = data.work;
+      showSuccess('intro-success', '✅ Audio de introducción generado con TTS');
+      updateIntroPlayer();
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnGenerateIntroTTS.disabled = false;
+      btnGenerateIntroTTS.textContent = '🔊 Generar audio con TTS';
+    }
+  });
+}
+
+// ==========================================
+// SUBIR AUDIO DE INTRODUCCIÓN MANUAL
+// ==========================================
+const btnUploadIntroAudio = document.getElementById('btn-upload-intro-audio');
+if (btnUploadIntroAudio) {
+  btnUploadIntroAudio.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    const fileInput = document.getElementById('work-intro-audio');
+    const file = fileInput.files[0];
+    if (!file) return showError('intro-error', 'Selecciona un archivo de audio.');
+    if (file.size > 15 * 1024 * 1024) return showError('intro-error', 'El audio no puede superar los 15MB.');
+    
+    try {
+      btnUploadIntroAudio.disabled = true;
+      btnUploadIntroAudio.textContent = '⏳ Subiendo...';
+      
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-intro-audio`, {
+        method: 'POST',
+        body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+      });
+      
+      currentWork = data.work;
+      fileInput.value = '';
+      showSuccess('intro-success', '✅ Audio de introducción subido correctamente');
+      updateIntroPlayer();
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnUploadIntroAudio.disabled = false;
+      btnUploadIntroAudio.textContent = '📤 Subir audio';
+    }
+  });
+}
+
+// ==========================================
+// SUBIR AUDIO AMBIENTAL
+// ==========================================
+const btnUploadAmbience = document.getElementById('btn-upload-ambience');
+if (btnUploadAmbience) {
+  btnUploadAmbience.addEventListener('click', async () => {
+    if (!currentWork) return showError('intro-error', 'Primero guarda la obra como borrador.');
+    
+    const fileInput = document.getElementById('work-ambience');
+    const file = fileInput.files[0];
+    if (!file) return showError('intro-error', 'Selecciona un archivo de audio ambiental.');
+    if (file.size > 15 * 1024 * 1024) return showError('intro-error', 'El audio no puede superar los 15MB.');
+
+    try {
+      btnUploadAmbience.disabled = true;
+      btnUploadAmbience.textContent = '⏳ Subiendo...';
+      
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const data = await apiCall(`/api/admin/works/${currentWork.id}/upload-ambience`, {
+        method: 'POST',
+        body: { audioData: base64, audioType: file.type || 'audio/mpeg' }
+      });
+
+      currentWork = data.work;
+      fileInput.value = '';
+      showSuccess('intro-success', '✅ Audio ambiental subido correctamente');
+    } catch (err) {
+      showError('intro-error', err.message);
+    } finally {
+      btnUploadAmbience.disabled = false;
+      btnUploadAmbience.textContent = '📤 Subir ambiente';
+    }
+  });
+}
+
+// ==========================================
+// ACTUALIZAR REPRODUCTOR DE INTRO
+// ==========================================
+function updateIntroPlayer() {
+  const container = document.getElementById('intro-player-container');
+  const player = document.getElementById('intro-player');
+  if (!container || !player || !currentWork) return;
+  
+  if (currentWork.introAudioPath) {
+    player.src = `/api/media/${currentWork.id}/intro`;
+    container.style.display = 'block';
+  } else {
+    player.src = '';
+    container.style.display = 'none';
+  }
+}
+
+// Helper para mensajes de éxito
+function showSuccess(elId, msg) {
+  const el = document.getElementById(elId);
+  if (el) {
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+}
 
 // ==========================================
 // INICIALIZACIÓN
