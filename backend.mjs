@@ -106,67 +106,6 @@ async function authoringData(draft) {
   return { ...data, image: await signedObject(imagePath) };
 }
 
-async function generateDraft(request, user) {
-  const body = await readBody(request, 8_030_000);
-  const base = artworkFields(body);
-  const bytes = verifyImage(body.imageType, body.imageData);
-  const id = randomUUID();
-  const extensions = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
-  const imagePath = `works/${id}/art.${extensions[body.imageType]}`;
-  await saveObject(imagePath, bytes, body.imageType);
-  try {
-    const raw = await describeImage(base, imagePath, body.imageType);
-    let narration;
-    try { narration = normalizeNarration(raw); }
-    catch { throw new HttpError(502, 'El borrador de Gemini no cumple el formato de las zonas. Intenta generarlo de nuevo.'); }
-    const draft = { ...base, ...narration, id, imagePath, createdAt: new Date().toISOString(), createdBy: user.uid };
-    await writeDoc('drafts', id, draft);
-    return HTTP(201, { draft: await authoringData(draft) });
-  } catch (error) {
-    const stored = await readDoc('drafts', id).catch(() => undefined);
-    if (stored === null) await removeObject(imagePath).catch(() => {});
-    throw error;
-  }
-}
-
-async function publish(request, id, user) {
-  const body = await readBody(request);
-  if (body.approved !== true) throw new HttpError(400, 'Confirma que revisaste los textos y las zonas.');
-  const current = await readDoc('drafts', id);
-  if (!current) {
-    const result = await readDoc('works', id);
-    if (result) return okay({ id, work: publicData(result.data) });
-    throw notFound();
-  }
-  const { data: draft, updateTime } = current;
-  const approved = normalizeNarration(body, draft.zones);
-  const version = createHash('sha256').update(JSON.stringify(approved)).digest('hex').slice(0, 24);
-  const tracks = [
-    ['intro', approved.intro], ['ficha', `${draft.title}, de ${draft.artist}. ${approved.summary}`],
-    ...approved.zones.map(zone => [zone.id, zone.text])
-  ];
-  const audio = Object.fromEntries(await Promise.all(tracks.map(async ([key, script]) => {
-    const path = `works/${id}/audio/${version}/${key}.mp3`;
-    const bytes = await synthesize(script);
-    await saveObject(path, bytes, 'audio/mpeg');
-    return [key, path];
-  })));
-  const ambiencePath = draft.sound ? `ambientes/amb-${draft.sound}.wav` : '';
-  const artwork = { ...draft, ...approved, audio, ambiencePath, publishedAt: new Date().toISOString(), publishedBy: user.uid };
-  try {
-    await commitPublication(id, updateTime, artwork);
-  } catch (error) {
-    const published = await readDoc('works', id);
-    if (!published) throw error;
-    if (published.data.audio.intro !== audio.intro) {
-      await Promise.allSettled(Object.values(audio).map(removeObject));
-      throw new HttpError(409, 'Otra persona publicó el borrador mientras lo revisabas. Abre la obra publicada.');
-    }
-  }
-  expiration = 0;
-  return okay({ id, work: publicData(artwork) });
-}
-
 export async function api(request, path) {
   const method = request.method;
   if (method === 'GET' && path === '/api/config') return okay({ cloud: cloudEnabled, registration: registrationEnabled && cloudEnabled });
@@ -231,23 +170,6 @@ export async function api(request, path) {
     const preferences = normalizePreferences(await readBody(request, 4000));
     await writeDoc('preferences', id, preferences);
     return okay({ preferences });
-  }
-  if (path === '/api/curation/drafts' && ['GET', 'POST'].includes(method)) {
-    const user = await readUser(request, true);
-    if (method === 'POST') return generateDraft(request, user);
-    const drafts = (await listDocs('drafts')).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-    return okay({ drafts: drafts.map(({ id, title }) => ({ id, title })) });
-  }
-  const draftMatch = path.match(/^\/api\/curation\/drafts\/([a-f0-9-]{36})(\/publish)?$/);
-  if (draftMatch) {
-    const [, id, action] = draftMatch;
-    const user = await readUser(request, true);
-    if (method === 'POST' && action) return publish(request, id, user);
-    if (method === 'GET' && !action) {
-      const document = await readDoc('drafts', id);
-      if (!document) throw notFound();
-      return okay({ draft: await authoringData(document.data) });
-    }
   }
   if (path === '/api/prueba') {
   if (method === 'POST') {
@@ -395,13 +317,13 @@ if (path === '/api/admin/register' && method === 'POST') {
       creatorId: user.uid,
       title: text(body.title, 120, 'título') || text(body.artist, 120, 'título'),
       artist: text(body.artist, 120, 'artista') || text(body.author, 120, 'artista'),
-      year: text(body.year, 20, 'año'),
-      technique: text(body.technique, 100, 'técnica'),
-      category: text(body.category, 100, 'categoría'),
-      exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición'),
-      intro: text(body.intro, 3000, 'introducción'),
-      summary: text(body.summary, 1000, 'resumen'),
-      aiDescription: text(body.aiDescription, 3000, 'descripción IA'),
+      year: text(body.year, 20, 'año', true),
+      technique: text(body.technique, 100, 'técnica', true),
+      category: text(body.category, 100, 'categoría', true),
+      exhibitionPlace: text(body.exhibitionPlace, 200, 'lugar de exposición', true),
+      intro: text(body.intro, 3000, 'introducción', true),
+      summary: text(body.summary, 1000, 'resumen', true),
+      aiDescription: text(body.aiDescription, 3000, 'descripción IA', true),
       uploadDate: new Date().toISOString(),
       imagePath: imagePath,
       imageType: body.imageType || 'image/jpeg',
@@ -542,7 +464,7 @@ if (path === '/api/admin/register' && method === 'POST') {
 
   // ELIMINAR OBRA
     if (path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/) && method === 'DELETE') {
-    const user = await readUser(request, true);
+    const user = await readUser(request);
     const workId = path.match(/^\/api\/admin\/works\/([a-f0-9-]{36})$/)[1];
     
     const workDoc = await readDoc('works', workId);

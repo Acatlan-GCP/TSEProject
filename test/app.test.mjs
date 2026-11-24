@@ -3,7 +3,7 @@ import test from 'node:test';
 import { once } from 'node:events';
 import { access } from 'node:fs/promises';
 import { createApp, parseRange } from '../server.mjs';
-import { normalizeNarration, normalizePreferences, safeSource } from '../model.mjs';
+import { normalizeNarration, normalizePreferences, safeSource, text } from '../model.mjs';
 import { works } from '../public/assets/js/works.js';
 
 test('los audios admiten intervalos abiertos y parciales', () => {
@@ -23,6 +23,12 @@ test('revisión editorial valida las coordenadas y conserva los identificadores'
   assert.throws(() => normalizeNarration(sample), /dentro de la imagen/);
   assert.throws(() => safeSource('javascript:alert(9)'), /HTTPS/);
   assert.throws(() => normalizePreferences({ rate: 99 }), /no son válidos/);
+});
+
+test('la validación de texto distingue campos opcionales vacíos, requeridos y demasiado largos', () => {
+  assert.equal(text('', 1000, 'resumen', true), '');
+  assert.throws(() => text('', 1000, 'título'), /título es obligatorio/);
+  assert.throws(() => text('x'.repeat(1001), 1000, 'resumen', true), /máximo 1000 caracteres/);
 });
 
 test('catálogo local incluye imágenes, narraciones y manifiesto', async () => {
