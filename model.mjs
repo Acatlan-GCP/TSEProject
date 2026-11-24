@@ -7,7 +7,11 @@ export class HttpError extends Error {
 
 export function text(value, limit, label, optional = false) {
   const cleaned = typeof value === 'string' ? value.trim() : '';
-  if (cleaned.length > limit || (!optional && !cleaned)) {
+  if (!cleaned) {
+    if (!optional) throw new HttpError(400, `El campo ${label} es obligatorio.`);
+    return cleaned;
+  }
+  if (cleaned.length > limit) {
     throw new HttpError(400, `Revisa el campo ${label} (máximo ${limit} caracteres).`);
   }
   return cleaned;
