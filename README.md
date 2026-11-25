@@ -10,7 +10,7 @@ Arte al oído es una galería móvil instalable en español de México. Permite 
 
 Para usar la PWA desde otro dispositivo, abre el enlace HTTPS del despliegue. En Android, usa la opción de instalar aplicación del navegador cuando aparezca. En iOS, abre el enlace en Safari y usa Compartir y Agregar a inicio. Después de la primera carga en línea, la PWA guarda la galería incluida para usarla sin conexión.
 
-Cada página vive en su propia carpeta dentro de `public/`: `/galeria/`, `/buscar/`, `/ajustes/`, `/obra/`, `/cuenta/` y `/curaduria/`. La portada está en `public/index.html`; los recursos compartidos están en `public/assets/`, y la prueba de servicios GCP en `public/test-gcp/` (también disponible como `/test-gcp.html` y `/test.gcp.html`).
+Cada página vive en su propia carpeta dentro de `public/`: `/galeria/`, `/buscar/`, `/ajustes/` y `/obra/`. La portada está en `public/index.html`; los recursos compartidos están en `public/assets/`, y la prueba de servicios GCP en `public/test-gcp/` (también disponible como `/test-gcp.html` y `/test.gcp.html`).
 
 ## Interacción y accesibilidad
 

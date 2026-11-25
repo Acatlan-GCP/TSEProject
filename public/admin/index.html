@@ -124,68 +124,85 @@
         <button type="button" class="btn-add-zone" onclick="addZone()" style="margin-top: 10px;">➕ Agregar zona manual</button>
         <div id="zones-list" class="zones-list"></div>
 
-        <!-- ========================================== -->
+        
         <!-- 3. INTRODUCCIÓN A LA OBRA -->
-        <!-- ========================================== -->
-        <div style="margin-top: 30px; padding: 20px; background: #e7f3ff; border-radius: 8px; border: 2px solid #2196F3;">
-          <h4 style="margin-top: 0; color: #1976D2;">📝 Introducción a la obra</h4>
-          <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
-            Este texto se reproducirá al presionar "Escuchar introducción" en la galería pública.
-          </p>
-          
-          <textarea id="work-intro" rows="6" placeholder="Escribe aquí la introducción o genera automáticamente con IA..." style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: inherit; font-size: 14px;"></textarea>
-          
-          <div style="margin-top: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
-            <button type="button" id="btn-generate-intro-ai" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-              🤖 Generar con IA
-            </button>
-            <button type="button" id="btn-generate-intro-tts" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-              🔊 Generar audio con TTS
-            </button>
-          </div>
-          
-          <div id="intro-success" style="display: none; margin-top: 10px; padding: 10px; background: #d4edda; color: #155724; border-radius: 4px;"></div>
-          <div id="intro-error" style="display: none; margin-top: 10px; padding: 10px; background: #f8d7da; color: #721c24; border-radius: 4px;"></div>
-        </div>
+        <section class="admin-section intro-section">
+          <h4>
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/>
+              <path d="M8 7h8M8 11h8"/>
+            </svg>
+            Introducción a la obra
+          </h4>
 
-        <!-- ========================================== -->
-        <!-- 4. AUDIO DE INTRODUCCIÓN (TTS o Manual) -->
-        <!-- ========================================== -->
-        <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">
-          <h4 style="margin-top: 0;">🎧 Audio de la introducción</h4>
-          
-          <!-- Reproductor -->
-          <div id="intro-player-container" style="display: none; margin: 10px 0;">
-            <audio id="intro-player" controls style="width: 100%;"></audio>
-            <small style="color: #666;">Audio actual guardado</small>
-          </div>
-          
-          <!-- Subir audio manual -->
-          <div style="margin-top: 15px;">
-            <label for="work-intro-audio" style="display: block; margin-bottom: 5px; font-weight: 500;">
-              📤 O sube tu propio audio (MP3/WAV, máx 10MB):
-            </label>
-            <input type="file" id="work-intro-audio" accept="audio/mpeg,audio/mp3,audio/wav" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-            <button type="button" id="btn-upload-intro-audio" style="margin-left: 10px; padding: 8px 16px; background: #17a2b8; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              📤 Subir audio
+          <p>Este texto se reproducirá al presionar "Escuchar introducción" en la galería pública.</p>
+
+          <textarea id="work-intro" rows="6"
+            placeholder="Escribe aquí la introducción o genera automáticamente con IA..."></textarea>
+
+          <div class="section-actions">
+            <button type="button" id="btn-generate-intro-ai" class="btn-primary">
+              <span aria-hidden="true">✦</span> Generar con IA
+            </button>
+            <button type="button" id="btn-generate-intro-tts" class="btn-secondary">
+              <svg class="button-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M11 5 6 9H3v6h3l5 4V5Z"/>
+                <path d="M15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14"/>
+              </svg>
+              Generar audio con TTS
             </button>
           </div>
-        </div>
 
-        <!-- ========================================== -->
+          <div id="intro-success" class="success-msg" hidden></div>
+          <div id="intro-error" class="error-msg" hidden></div>
+        </section>
+
+        <!-- 4. AUDIO DE INTRODUCCIÓN -->
+        <section class="admin-section audio-section">
+          <h4>
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M3 14v-3a9 9 0 0 1 18 0v3"/>
+              <path d="M3 14h3v6H5a2 2 0 0 1-2-2v-4Zm18 0h-3v6h1a2 2 0 0 0 2-2v-4Z"/>
+            </svg>
+            Audio de la introducción
+          </h4>
+
+          <div id="intro-player-container" hidden>
+            <audio id="intro-player" controls></audio>
+            <small>Audio actual guardado</small>
+          </div>
+
+          <div class="upload-group">
+            <label for="work-intro-audio">Subir audio propio (MP3/WAV, máximo 10 MB)</label>
+            <input type="file" id="work-intro-audio" accept="audio/mpeg,audio/mp3,audio/wav">
+            <button type="button" id="btn-upload-intro-audio" class="btn-primary">
+              Subir audio
+            </button>
+          </div>
+        </section>
+
         <!-- 5. MÚSICA AMBIENTAL -->
-        <!-- ========================================== -->
-        <div style="margin-top: 20px; padding: 15px; background: #f0f8f0; border-radius: 8px; border: 1px solid #c8e6c9;">
-          <h4 style="margin-top: 0;">🌿 Música Ambiental (Fondo)</h4>
-          <p style="color: #666; font-size: 14px; margin-bottom: 15px;">
-            Esta música se reproducirá de fondo mientras se escucha la introducción y las zonas.
-          </p>
-          
-          <input type="file" id="work-ambience" accept="audio/mpeg,audio/mp3,audio/wav" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-          <button type="button" id="btn-upload-ambience" style="margin-left: 10px; padding: 8px 16px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer;">
-            📤 Subir ambiente
-          </button>
-        </div>
+        <section class="admin-section ambience-section">
+          <h4>
+            <svg class="section-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 22c4-2 7-6 7-11-5 0-9 3-11 8"/>
+              <path d="M12 22c-1-5-4-8-9-9 0 5 3 8 9 9Z"/>
+              <path d="M12 22V11"/>
+            </svg>
+            Música ambiental (fondo)
+          </h4>
+
+          <p>Esta música se reproducirá de fondo mientras se escucha la introducción y las zonas.</p>
+
+          <div class="upload-group">
+            <label for="work-ambience">Seleccionar archivo de audio</label>
+            <input type="file" id="work-ambience" accept="audio/mpeg,audio/mp3,audio/wav">
+            <button type="button" id="btn-upload-ambience" class="btn-secondary">
+              Subir ambiente
+            </button>
+          </div>
+        </section>
 
         <!-- ========================================== -->
         <!-- 6. BOTONES DE ACCIÓN -->

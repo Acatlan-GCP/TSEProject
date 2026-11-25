@@ -1167,68 +1167,6 @@ body[data-page="ajustes"] #volume-value {
 body[data-page="ajustes"] #test-audio {
   margin-top: .5rem;
 }
-/* =========================================
-   CUENTA
-   ========================================= */
-body[data-page="cuenta"] .page-heading {
-  text-align: center;
-}
-body[data-page="cuenta"] .page-heading p {
-  margin-inline: auto;
-}
-body[data-page="cuenta"] #account-form,
-body[data-page="cuenta"] #account-session {
-  width: 100%;
-  max-width: 520px;
-  margin-inline: auto;
-}
-body[data-page="cuenta"] #account-form input {
-  width: 100%;
-}
-body[data-page="cuenta"] #account-form button {
-  width: 100%;
-}
-body[data-page="cuenta"] #account-form-status,
-body[data-page="cuenta"] #account-status {
-  font-size: .9rem;
-  line-height: 1.6;
-}
-body[data-page="cuenta"] #session-email {
-  color: var(--accent);
-  overflow-wrap: anywhere;
-}
-/* =========================================
-   CURADURÍA
-   ========================================= */
-body[data-page="curaduria"] #generate {
-  padding: clamp(1.2rem, 3vw, 2rem);
-}
-body[data-page="curaduria"] #generate input,
-body[data-page="curaduria"] #generate select,
-body[data-page="curaduria"] #generate textarea {
-  width: 100%;
-}
-body[data-page="curaduria"] #generate button {
-  width: fit-content;
-  max-width: 100%;
-}
-body[data-page="curaduria"] #draft-status {
-  color: var(--muted);
-  line-height: 1.6;
-}
-body[data-page="curaduria"] #drafts {
-  display: grid;
-  gap: 1rem;
-}
-body[data-page="curaduria"] #drafts > * {
-  border: 1px solid rgba(192, 203, 215, .16);
-  border-radius: .8rem;
-  padding: 1rem;
-  background: rgba(5, 19, 32, .35);
-}
-body[data-page="curaduria"] #review {
-  margin-top: 1rem;
-}
 
 /* =========================================
    INTERFAZ ACCESIBLE — ARTE AL OÍDO

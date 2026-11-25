@@ -1,3 +1,4 @@
+import { session } from './account.js';
 import { works as demo, welcome } from './works.js';
 import {
   audioStatus, environmentSound, pauseVoice, playVoice, resumeEnvironment, stopVoice,
@@ -15,20 +16,23 @@ let selected = 0;
 let services = { cloud: false };
 
 async function showAdminAccess() {
+  const link = document.querySelector('#admin-menu-link');
+
+  if (!link) return;
+
   const tokens = [];
 
-  if (session.token) tokens.push(session.token);
+  if (session.token) {
+    tokens.push(session.token);
+  }
 
   try {
     const adminToken = localStorage.getItem('admin_token');
+
     if (adminToken && !tokens.includes(adminToken)) {
       tokens.push(adminToken);
     }
   } catch {}
-
-  if (!tokens.length) return;
-
-  let profile = null;
 
   for (const token of tokens) {
     try {
@@ -41,40 +45,18 @@ async function showAdminAccess() {
       if (!response.ok) continue;
 
       const data = await response.json();
-      profile = data.user;
-      break;
+      const role = data.user?.role;
+
+      if (['administrador', 'creador'].includes(role)) {
+        link.hidden = false;
+        return;
+      }
     } catch {
-      // Si falla una sesión, se intenta con el siguiente token.
+      // Se intenta validar con el siguiente token.
     }
   }
 
-  if (!profile) return;
-
-  const allowedRoles = ['administrador', 'creador'];
-
-  if (!allowedRoles.includes(profile.role)) return;
-
-  const link = document.createElement('a');
-  link.href = '/admin/';
-  link.className = 'button access-button admin-panel-link';
-  link.textContent = 'Panel de administración';
-  link.setAttribute('aria-label', 'Ir al panel de administración');
-
-  const accessMenu = document.querySelector('.access-menu');
-
-  if (accessMenu) {
-    accessMenu.append(link);
-    return;
-  }
-
-  const navigation = document.querySelector(
-    'nav[aria-label="Navegación principal"]'
-  );
-
-  if (navigation) {
-    link.classList.remove('button', 'access-button');
-    navigation.append(link);
-  }
+  link.hidden = true;
 }
 
 function setPreferences(values = {}) {
@@ -149,6 +131,60 @@ function fillHome() {
   // Se conserva el resto de la aplicación sin modificaciones.
 }
 
+function fillMenu() {
+  const welcomeButton = document.querySelector('#welcome-audio');
+  const welcomeStatus = document.querySelector('#welcome-status');
+  const welcomeKey = 'bienvenida-menu';
+
+  if (!welcomeButton) return;
+
+  welcomeButton.addEventListener('click', () => {
+    if (audioStatus(welcomeKey) === 'playing') {
+      pauseVoice(welcomeKey);
+      return;
+    }
+
+    playVoice(
+      welcomeKey,
+      welcome,
+      null,
+      state => {
+        if (state === 'playing') {
+          welcomeButton.textContent = 'Pausar bienvenida';
+          welcomeButton.setAttribute('aria-pressed', 'true');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent =
+              'Reproduciendo mensaje de bienvenida.';
+          }
+        } else if (state === 'paused') {
+          welcomeButton.textContent = 'Reanudar bienvenida';
+          welcomeButton.setAttribute('aria-pressed', 'false');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent = 'Bienvenida pausada.';
+          }
+        } else if (state === 'unavailable') {
+          welcomeButton.textContent = 'Intentar nuevamente';
+          welcomeButton.setAttribute('aria-pressed', 'false');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent =
+              'No fue posible reproducir la bienvenida.';
+          }
+        } else {
+          welcomeButton.textContent = 'Escuchar bienvenida';
+          welcomeButton.setAttribute('aria-pressed', 'false');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent =
+              'La bienvenida ha terminado.';
+          }
+        }
+      }
+    );
+  });
+}
 
 function fillGallery() {
   const current = document.querySelector('#current-work');
@@ -729,8 +765,6 @@ async function initialize() {
   const configPromise = fetch('/api/config').then(response => response.json()).then(data => {
     services = data;
     session.configure(data);
-    const accountLink = document.querySelector('#account-link');
-    if (accountLink) accountLink.hidden = !services.cloud;
     const adminLink = document.querySelector('#admin-link');
     if (adminLink) {
       adminLink.hidden = !session.user; 
@@ -740,6 +774,7 @@ async function initialize() {
   await Promise.allSettled([configPromise, catalogPromise]);
   await showAdminAccess();
   if (page === 'inicio') fillHome();
+  if (page === 'menu') fillMenu();
   if (page === 'galeria') fillGallery();
   if (page === 'buscar') fillSearch();
   if (page === 'ajustes') fillSettings();

@@ -1,9 +1,6 @@
-const version = 'arte-al-oido-1.0.3';
+const version = 'arte-al-oido-1.0.4';
 const shell = [
-  '/', '/galeria/', '/buscar/', '/ajustes/', '/obra/', '/cuenta/', '/curaduria/',
-  '/assets/css/styles.css', '/assets/js/app.js', '/assets/js/works.js', '/assets/js/player.js',
-  '/assets/js/account.js', '/assets/manifest.webmanifest',
-  '/media/icon-192.png', '/media/icon-512.png'
+  '/','/menu/','/galeria/','/buscar/','/ajustes/','/obra/','/assets/css/styles.css','/assets/js/app.js','/assets/js/works.js','/assets/js/player.js','/assets/js/account.js','/assets/manifest.webmanifest','/media/icon-192.png', '/media/icon-512.png'
 ];
 const art = {
   'gran-ola': ['ola', 'fuji', 'barcas'], dormitorio: ['sillas', 'ventana', 'cama'],
