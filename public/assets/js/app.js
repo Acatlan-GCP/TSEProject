@@ -1,3 +1,4 @@
+import { session } from './account.js';
 import { works as demo, welcome } from './works.js';
 import {
   audioStatus, environmentSound, pauseVoice, playVoice, resumeEnvironment, stopVoice,
@@ -13,6 +14,50 @@ let preferences = { ...defaults };
 let catalog = [...demo];
 let selected = 0;
 let services = { cloud: false };
+
+async function showAdminAccess() {
+  const link = document.querySelector('#admin-menu-link');
+
+  if (!link) return;
+
+  const tokens = [];
+
+  if (session.token) {
+    tokens.push(session.token);
+  }
+
+  try {
+    const adminToken = localStorage.getItem('admin_token');
+
+    if (adminToken && !tokens.includes(adminToken)) {
+      tokens.push(adminToken);
+    }
+  } catch {}
+
+  for (const token of tokens) {
+    try {
+      const response = await fetch('/api/admin/me', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      const role = data.user?.role;
+
+      if (['administrador', 'creador'].includes(role)) {
+        link.hidden = false;
+        return;
+      }
+    } catch {
+      // Se intenta validar con el siguiente token.
+    }
+  }
+
+  link.hidden = true;
+}
 
 function setPreferences(values = {}) {
   const input = values ?? {};
@@ -86,6 +131,60 @@ function fillHome() {
   // Se conserva el resto de la aplicación sin modificaciones.
 }
 
+function fillMenu() {
+  const welcomeButton = document.querySelector('#welcome-audio');
+  const welcomeStatus = document.querySelector('#welcome-status');
+  const welcomeKey = 'bienvenida-menu';
+
+  if (!welcomeButton) return;
+
+  welcomeButton.addEventListener('click', () => {
+    if (audioStatus(welcomeKey) === 'playing') {
+      pauseVoice(welcomeKey);
+      return;
+    }
+
+    playVoice(
+      welcomeKey,
+      welcome,
+      null,
+      state => {
+        if (state === 'playing') {
+          welcomeButton.textContent = 'Pausar bienvenida';
+          welcomeButton.setAttribute('aria-pressed', 'true');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent =
+              'Reproduciendo mensaje de bienvenida.';
+          }
+        } else if (state === 'paused') {
+          welcomeButton.textContent = 'Reanudar bienvenida';
+          welcomeButton.setAttribute('aria-pressed', 'false');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent = 'Bienvenida pausada.';
+          }
+        } else if (state === 'unavailable') {
+          welcomeButton.textContent = 'Intentar nuevamente';
+          welcomeButton.setAttribute('aria-pressed', 'false');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent =
+              'No fue posible reproducir la bienvenida.';
+          }
+        } else {
+          welcomeButton.textContent = 'Escuchar bienvenida';
+          welcomeButton.setAttribute('aria-pressed', 'false');
+
+          if (welcomeStatus) {
+            welcomeStatus.textContent =
+              'La bienvenida ha terminado.';
+          }
+        }
+      }
+    );
+  });
+}
 
 function fillGallery() {
   const current = document.querySelector('#current-work');
@@ -666,8 +765,6 @@ async function initialize() {
   const configPromise = fetch('/api/config').then(response => response.json()).then(data => {
     services = data;
     session.configure(data);
-    const accountLink = document.querySelector('#account-link');
-    if (accountLink) accountLink.hidden = !services.cloud;
     const adminLink = document.querySelector('#admin-link');
     if (adminLink) {
       adminLink.hidden = !session.user; 
@@ -675,7 +772,9 @@ async function initialize() {
   });
   const catalogPromise = loadCatalog();
   await Promise.allSettled([configPromise, catalogPromise]);
+  await showAdminAccess();
   if (page === 'inicio') fillHome();
+  if (page === 'menu') fillMenu();
   if (page === 'galeria') fillGallery();
   if (page === 'buscar') fillSearch();
   if (page === 'ajustes') fillSettings();

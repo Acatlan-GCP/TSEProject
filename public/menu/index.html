@@ -1,0 +1,111 @@
+
+<!doctype html>
+<html lang="es-MX">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#091827">
+  <meta name="description" content="Menú principal de Arte al oído.">
+  <link rel="manifest" href="/assets/manifest.webmanifest">
+  <link rel="icon" href="/media/icon-192.png">
+  <link rel="stylesheet" href="/assets/css/styles.css">
+  <title>Menú principal · Arte al oído</title>
+</head>
+
+<body data-page="menu">
+  <a class="skip" href="#contenido">Saltar al contenido</a>
+
+  <header class="top">
+    <div class="shell top-inner">
+      <a class="brand" href="/" aria-label="Arte al oído, inicio">
+        <span class="brand-mark" aria-hidden="true">≈</span>
+        Arte<span class="brand-accent"> al oído</span>
+      </a>
+
+      <nav aria-label="Navegación principal">
+        <a href="/menu/" aria-current="page">Menú principal</a>
+        <a href="/galeria/">Galería</a>
+        <a href="/buscar/">Buscar</a>
+        <a href="/ajustes/">Ajustes</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido" class="shell" tabindex="-1">
+    <section class="page">
+      <a class="breadcrumbs" href="/">Inicio</a>
+
+      <div class="page-heading">
+        <h1 tabindex="-1">Menú principal</h1>
+        <p class="muted">
+          Bienvenido a Arte al oído. Selecciona una opción
+          para comenzar a explorar.
+        </p>
+      </div>
+
+      <section class="access-menu" aria-label="Opciones principales">
+
+        <button
+          type="button"
+          class="button primary access-button"
+          id="welcome-audio"
+          aria-pressed="false">
+          <span aria-hidden="true">▶</span>
+          Escuchar bienvenida
+        </button>
+
+        <a class="button access-button" href="/galeria/">
+          <span aria-hidden="true">♫</span>
+          Explorar obras
+        </a>
+
+        <a class="button access-button" href="/buscar/">
+          <span aria-hidden="true">⌕</span>
+          Buscar una obra
+        </a>
+
+        <a class="button access-button" href="/ajustes/">
+          <span aria-hidden="true">⚙</span>
+          Configuración
+        </a>
+
+        <a
+            class="button access-button admin-panel-link"
+            id="admin-menu-link"
+            href="/admin/"
+            hidden>
+            <span aria-hidden="true">⚙</span>
+            Panel de administración
+        </a>
+
+      </section>
+
+      <p
+        id="welcome-status"
+        class="sr-only"
+        role="status"
+        aria-live="polite">
+      </p>
+    </section>
+  </main>
+
+  <footer class="shell footer">
+    <span>Arte al oído</span>
+    <span>Galería táctil y sonora</span>
+  </footer>
+
+  <div
+    id="route-status"
+    class="sr-only"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true">
+  </div>
+
+  <audio id="voice" preload="auto" playsinline></audio>
+  <audio id="ambience" preload="none" playsinline loop></audio>
+  <audio id="effect" preload="none" playsinline></audio>
+
+  <script type="module" src="/assets/js/app.js"></script>
+</body>
+</html>

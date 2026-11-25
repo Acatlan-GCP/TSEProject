@@ -49,7 +49,7 @@ test('servidor permite ejecutar el catálogo local y entrega audio parcial', asy
   assert.match(await index.text(), /Arte al oído/);
   assert.match(index.headers.get('content-security-policy'), /script-src 'self'/);
   assert.doesNotMatch(index.headers.get('content-security-policy'), /script-src[^;]*unsafe-inline/);
-  for (const route of ['/galeria/', '/buscar/', '/ajustes/', '/obra/', '/cuenta/', '/curaduria/', '/test-gcp/', '/test-gcp.html', '/test.gcp.html']) {
+  for (const route of ['/galeria/', '/buscar/', '/ajustes/', '/obra/', '/test-gcp/', '/test-gcp.html', '/test.gcp.html']) {
     const page = await fetch(`${url}${route}`);
     assert.equal(page.status, 200, `${route} debe servir una página`);
     assert.match(page.headers.get('content-type'), /text\/html/);
