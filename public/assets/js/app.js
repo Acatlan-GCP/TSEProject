@@ -3,7 +3,6 @@ import {
   audioStatus, environmentSound, pauseVoice, playVoice, resumeEnvironment, stopVoice,
   updateAudio, vibrate, zoneEffect
 } from './player.js';
-import { mountAccount, mountCurator, session } from './account.js';
 
 const main = document.querySelector('main');
 const status = document.querySelector('#route-status');
@@ -745,23 +744,6 @@ async function initialize() {
   if (page === 'buscar') fillSearch();
   if (page === 'ajustes') fillSettings();
   if (page === 'obra') await loadWork();
-  if (page === 'cuenta' && services.cloud) mountAccount(document, {
-    preferences: () => ({ ...preferences }),
-    setPreferences: data => { setPreferences(data); savePreferences(); }
-  });
-  if (page === 'cuenta' && !services.cloud) {
-    document.querySelector('#account-form').hidden = true;
-    document.querySelector('#account-form-status').textContent = 'La cuenta no está disponible en este entorno.';
-  }
-  if (page === 'curaduria' && services.cloud) {
-    mountCurator(document, work => {
-      if (!catalog.some(item => item.id === work.id)) catalog.push(work);
-    });
-  }
-  if (page === 'curaduria' && !services.cloud) {
-    document.querySelector('#generate').hidden = true;
-    document.querySelector('#drafts').textContent = 'La curaduría no está disponible en este entorno.';
-  }
 }
 
 initialize();
